@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import CarbonCreditTokenABI from "./CarbonToken.json"; // Add ABI JSON file
 
-const tokenAddress = "0xc6e7DF5E7b4f2A278906862b61205850344D4e7d";
+const tokenAddress = "0xDC11f7E700A4c898AE5CAddB1082cFfa76512aDD";
 
 function App() {
   const ethers = require("ethers");
@@ -10,10 +10,10 @@ function App() {
   const [ethBalance, setEthBalance] = useState(0);
   const [recipient, setRecipient] = useState("");
   const [amountCTKN, setAmountCTKN] = useState("");
-  // const [amountETH, setAmountETH] = useState("");
   const [token, setToken] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [balances, setBalances] = useState({});
+  const [listings, setListings] = useState([]);
 
   useEffect(() => {
     const init = async () => {
@@ -32,66 +32,67 @@ function App() {
           signer
         );
         setToken(token);
+
+        // Fetch user's CTKN balance
         const ctknBalance = await token.balanceOf(account);
         setCtknBalance(ethers.utils.formatUnits(ctknBalance, 18));
 
-        const ethBalance = await token.provider.getBalance(account);
+        // Fetch user's ETH balance
+        const ethBalance = await provider.getBalance(account);
         setEthBalance(ethers.utils.formatEther(ethBalance));
 
-        // Get list of all accounts connected to MetaMask
+        // Fetch list of all accounts connected to MetaMask
         const accounts = await provider.listAccounts();
         setAccounts(accounts);
-        fetchBalances(accounts, token);
+
+        // Fetch CTKN listings
+        fetchListings(token);
       }
     };
     init();
   }, []);
 
-  const fetchBalances = async (accounts, token, provider) => {
-    const balances = {};
-    for (const acc of accounts) {
-      const ctknBalance = await token.balanceOf(acc);
-      const ethBalance = await token.provider.getBalance(acc);
-      balances[acc] = {
-        ctkn: ethers.utils.formatUnits(ctknBalance, 18),
-        eth: ethers.utils.formatEther(ethBalance),
-      };
+  const fetchListings = async (token) => {
+    const numListings = await token.nextListingId();
+    const listings = [];
+    for (let i = 0; i < numListings; i++) {
+      const listing = await token.listings(i);
+      listings.push(listing);
     }
-    setBalances(balances);
+    setListings(listings);
   };
 
-  const handleTransfer = async (e) => {
+  const handleListCTKN = async (e) => {
     e.preventDefault();
+    if (token && amountCTKN > 0) {
+      try {
+        await token.listCTKNForSale(
+          ethers.utils.parseUnits(amountCTKN, 18),
+          ethers.utils.parseEther("0.1")
+        );
+        alert("CTKN listed for sale successfully!");
+        fetchListings(token); // Update listings after listing CTKN
+      } catch (error) {
+        console.error("Listing failed", error);
+        alert("Listing failed: " + error.message);
+      }
+    }
+  };
+
+  const handleBuyCTKN = async (listing) => {
     if (token) {
       try {
-        const amountETH = "100";
-        // Check if the recipient has approved the smart contract to spend ETH
-        const recipientEthBalance = await token.provider.getBalance(recipient);
-        if (ethers.utils.parseEther(amountETH).gt(recipientEthBalance)) {
-          alert("Recipient does not have enough ETH");
-          return;
-        }
-
-        const tx = await token.transferCTKNWithETHBack(
-          recipient,
-          ethers.utils.parseUnits(amountCTKN, 18),
-          ethers.utils.parseEther(amountETH),
-          {
-            value: ethers.utils.parseEther(amountETH), // Send ETH with the transaction
-          }
-        );
-        await tx.wait();
+        await token.buyCTKNFromListing(listing.id, listing.priceETH);
+        alert("CTKN purchased successfully!");
+        fetchListings(token); // Update listings after purchasing CTKN
+        // Fetch updated balances after transaction
         const ctknBalance = await token.balanceOf(account);
         setCtknBalance(ethers.utils.formatUnits(ctknBalance, 18));
-
         const ethBalance = await token.provider.getBalance(account);
         setEthBalance(ethers.utils.formatEther(ethBalance));
-
-        fetchBalances(accounts, token); // Update balances after transfer
-        alert("Transfer successful!");
       } catch (error) {
-        console.error("Transfer failed", error);
-        alert("Transfer failed: " + error.message);
+        console.error("Purchase failed", error);
+        alert("Purchase failed: " + error.message);
       }
     }
   };
@@ -101,18 +102,10 @@ function App() {
       <h1>Carbon Credit Trading System</h1>
       <p>Your account: {account}</p>
       <p>Your Carbon Credit Balance: {ctknBalance}</p>
-      <form onSubmit={handleTransfer}>
+      <p>Your ETH Balance: {ethBalance}</p>
+      <form onSubmit={handleListCTKN}>
         <div>
-          <label>Recipient Address:</label>
-          <input
-            type="text"
-            value={recipient}
-            onChange={(e) => setRecipient(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label>Amount to Transfer:</label>
+          <label>Amount of CTKN to List:</label>
           <input
             type="number"
             value={amountCTKN}
@@ -120,15 +113,18 @@ function App() {
             required
           />
         </div>
-        <button type="submit">Transfer</button>
+        <button type="submit">List CTKN for Sale</button>
       </form>
-      <h2>Connected Accounts</h2>
+      <h2>CTKN Listings</h2>
       <ul>
-        {accounts.map((acc) => (
-          <li key={acc}>
-            <p>Address: {acc}</p>
-            <p>Balance: {balances[acc]?.ctkn} CTKN</p>
-            <p>Balance: {balances[acc]?.eth} ETH</p>
+        {listings.map((listing, index) => (
+          <li key={index}>
+            <p>Listing ID: {index}</p>
+            <p>
+              Amount: {ethers.utils.formatUnits(listing.amountCTKN, 18)} CTKN
+            </p>
+            <p>Price: {ethers.utils.formatEther(listing.priceETH)} ETH</p>
+            <button onClick={() => handleBuyCTKN(listing)}>Buy CTKN</button>
           </li>
         ))}
       </ul>

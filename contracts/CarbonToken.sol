@@ -39,6 +39,58 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
         require(success, "Failed to send ETH back to sender");
     }
 
+    // Define a struct to store listing details
+    struct Listing {
+        uint256 amountCTKN;
+        uint256 priceETH;
+        address seller;
+    }
+
+    // Mapping to store listings
+    mapping(uint256 => Listing) public listings;
+    uint256 public nextListingId;
+
+    // Event to emit when a new listing is created
+    event ListingCreated(
+        uint256 indexed listingId,
+        address indexed seller,
+        uint256 amountCTKN,
+        uint256 priceETH
+    );
+
+    // Function to list CTKN for sale
+    function listCTKNForSale(uint256 amountCTKN, uint256 priceETH) external {
+        require(balanceOf(msg.sender) >= amountCTKN, "Insufficient balance");
+        require(amountCTKN > 0 && priceETH > 0, "Invalid listing parameters");
+
+        // Transfer CTKN tokens to contract
+        transfer(address(this), amountCTKN);
+
+        // Store the listing details
+        listings[nextListingId] = Listing(amountCTKN, priceETH, msg.sender);
+        emit ListingCreated(nextListingId, msg.sender, amountCTKN, priceETH);
+        nextListingId++;
+    }
+
+    // Function to buy CTKN from a listing
+    function buyCTKNFromListing(
+        uint256 listingId,
+        uint256 priceETH
+    ) external payable {
+        Listing storage listing = listings[listingId];
+        require(listing.amountCTKN > 0, "Listing not found");
+        require(msg.value >= priceETH, "Insufficient ETH sent");
+
+        // Transfer CTKN to buyer
+        transfer(msg.sender, listing.amountCTKN);
+
+        // Transfer ETH to seller
+        payable(listing.seller).transfer(priceETH);
+
+        // Remove the listing
+        delete listings[listingId];
+    }
+
     // Function to allow contract to receive ETH
     receive() external payable {}
 }
