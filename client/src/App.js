@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from "react";
 import CarbonCreditTokenABI from "./CarbonToken.json"; // Add ABI JSON file
 
-const tokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const tokenAddress = "0xc6e7DF5E7b4f2A278906862b61205850344D4e7d";
 
 function App() {
   const ethers = require("ethers");
   const [account, setAccount] = useState("");
-  const [balance, setBalance] = useState(0);
+  const [ctknBalance, setCtknBalance] = useState(0);
+  const [ethBalance, setEthBalance] = useState(0);
   const [recipient, setRecipient] = useState("");
-  const [amount, setAmount] = useState("");
+  const [amountCTKN, setAmountCTKN] = useState("");
+  // const [amountETH, setAmountETH] = useState("");
   const [token, setToken] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [balances, setBalances] = useState({});
@@ -30,8 +32,11 @@ function App() {
           signer
         );
         setToken(token);
-        const balance = await token.balanceOf(account);
-        setBalance(ethers.utils.formatUnits(balance, 18));
+        const ctknBalance = await token.balanceOf(account);
+        setCtknBalance(ethers.utils.formatUnits(ctknBalance, 18));
+
+        const ethBalance = await token.provider.getBalance(account);
+        setEthBalance(ethers.utils.formatEther(ethBalance));
 
         // Get list of all accounts connected to MetaMask
         const accounts = await provider.listAccounts();
@@ -42,11 +47,15 @@ function App() {
     init();
   }, []);
 
-  const fetchBalances = async (accounts, token) => {
+  const fetchBalances = async (accounts, token, provider) => {
     const balances = {};
     for (const acc of accounts) {
-      const balance = await token.balanceOf(acc);
-      balances[acc] = ethers.utils.formatUnits(balance, 18);
+      const ctknBalance = await token.balanceOf(acc);
+      const ethBalance = await token.provider.getBalance(acc);
+      balances[acc] = {
+        ctkn: ethers.utils.formatUnits(ctknBalance, 18),
+        eth: ethers.utils.formatEther(ethBalance),
+      };
     }
     setBalances(balances);
   };
@@ -55,13 +64,29 @@ function App() {
     e.preventDefault();
     if (token) {
       try {
-        const tx = await token.transfer(
+        const amountETH = "100";
+        // Check if the recipient has approved the smart contract to spend ETH
+        const recipientEthBalance = await token.provider.getBalance(recipient);
+        if (ethers.utils.parseEther(amountETH).gt(recipientEthBalance)) {
+          alert("Recipient does not have enough ETH");
+          return;
+        }
+
+        const tx = await token.transferCTKNWithETHBack(
           recipient,
-          ethers.utils.parseUnits(amount, 18)
+          ethers.utils.parseUnits(amountCTKN, 18),
+          ethers.utils.parseEther(amountETH),
+          {
+            value: ethers.utils.parseEther(amountETH), // Send ETH with the transaction
+          }
         );
         await tx.wait();
-        const balance = await token.balanceOf(account);
-        setBalance(ethers.utils.formatUnits(balance, 18));
+        const ctknBalance = await token.balanceOf(account);
+        setCtknBalance(ethers.utils.formatUnits(ctknBalance, 18));
+
+        const ethBalance = await token.provider.getBalance(account);
+        setEthBalance(ethers.utils.formatEther(ethBalance));
+
         fetchBalances(accounts, token); // Update balances after transfer
         alert("Transfer successful!");
       } catch (error) {
@@ -75,7 +100,7 @@ function App() {
     <div>
       <h1>Carbon Credit Trading System</h1>
       <p>Your account: {account}</p>
-      <p>Your Carbon Credit Balance: {balance}</p>
+      <p>Your Carbon Credit Balance: {ctknBalance}</p>
       <form onSubmit={handleTransfer}>
         <div>
           <label>Recipient Address:</label>
@@ -90,8 +115,8 @@ function App() {
           <label>Amount to Transfer:</label>
           <input
             type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            value={amountCTKN}
+            onChange={(e) => setAmountCTKN(e.target.value)}
             required
           />
         </div>
@@ -102,7 +127,8 @@ function App() {
         {accounts.map((acc) => (
           <li key={acc}>
             <p>Address: {acc}</p>
-            <p>Balance: {balances[acc]} CTKN</p>
+            <p>Balance: {balances[acc]?.ctkn} CTKN</p>
+            <p>Balance: {balances[acc]?.eth} ETH</p>
           </li>
         ))}
       </ul>

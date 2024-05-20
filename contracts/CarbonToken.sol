@@ -20,4 +20,25 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
     function mint(address to, uint256 amount) public onlyOwner {
         _mint(to, amount);
     }
+
+    function transferCTKNWithETHBack(
+        address recipient,
+        uint256 amountCTKN,
+        uint256 amountETH
+    ) external payable {
+        require(
+            address(this).balance >= amountETH,
+            "Contract does not have enough ETH"
+        );
+
+        // Transfer CTKN tokens from sender to recipient
+        _transfer(msg.sender, recipient, amountCTKN);
+
+        // Ensure the recipient has approved the contract to spend ETH on their behalf
+        (bool success, ) = recipient.call{value: amountETH}("");
+        require(success, "Failed to send ETH back to sender");
+    }
+
+    // Function to allow contract to receive ETH
+    receive() external payable {}
 }
