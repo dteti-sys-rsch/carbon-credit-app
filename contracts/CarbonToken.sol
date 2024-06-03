@@ -20,13 +20,16 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
     event TokenListed(
         address indexed seller,
         uint256 amountCTKN,
-        uint256 priceETH
+        uint256 priceETH,
+        uint256 listingIndex
     );
+
     event TokenPurchased(
         address indexed buyer,
         address indexed seller,
         uint256 amountCTKN,
-        uint256 priceETH
+        uint256 priceETH,
+        uint256 listingIndex
     );
 
     constructor(
@@ -48,6 +51,7 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
             balanceOf(msg.sender) >= amountCTKN,
             "Insufficient CTKN balance"
         );
+        uint256 listingIndex = listings[msg.sender].length;
         listings[msg.sender].push(
             Listing({
                 seller: msg.sender,
@@ -56,7 +60,7 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
                 active: true
             })
         );
-        emit TokenListed(msg.sender, amountCTKN, priceETH);
+        emit TokenListed(msg.sender, amountCTKN, priceETH, listingIndex);
     }
 
     function buyToken(address seller, uint256 listingIndex) external payable {
@@ -68,19 +72,16 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
             "Seller does not have enough CTKN"
         );
 
-        // Transfer CTKN tokens from seller to buyer
         _transfer(listing.seller, msg.sender, listing.amountCTKN);
-
-        // Transfer ETH from buyer to seller
         payable(listing.seller).transfer(listing.priceETH);
 
-        // Mark the listing as inactive
         listing.active = false;
         emit TokenPurchased(
             msg.sender,
             seller,
             listing.amountCTKN,
-            listing.priceETH
+            listing.priceETH,
+            listingIndex
         );
     }
 
