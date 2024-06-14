@@ -8,20 +8,21 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
 contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
     struct Listing {
-        address seller;
         uint256 amountCTKN;
         uint256 priceETH;
         bool active;
+        string ipfsHash;
     }
 
-    // Mapping from seller address to their listings
     mapping(address => Listing[]) public listings;
+    string private secretKey;
 
     event TokenListed(
         address indexed seller,
         uint256 amountCTKN,
         uint256 priceETH,
-        uint256 listingIndex
+        uint256 listingIndex,
+        string ipfsHash
     );
 
     event TokenPurchased(
@@ -29,80 +30,117 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
         address indexed seller,
         uint256 amountCTKN,
         uint256 priceETH,
-        uint256 listingIndex
+        uint256 listingIndex,
+        string ipfsHash
     );
 
+    event ListingDeleted(address indexed seller, uint256 listingIndex);
+
     constructor(
-        address initialOwner
+        address initialOwner,
+        string memory _secretKey
     )
         ERC20("CarbonToken", "CTKN")
         Ownable(initialOwner)
         ERC20Permit("CarbonToken")
     {
-        _mint(msg.sender, 10000 * 10 ** decimals());
+        secretKey = _secretKey;
     }
 
-    function mint(address to, uint256 amount) public onlyOwner {
+    modifier onlyWithSecretKey(string memory _key) {
+        require(
+            keccak256(abi.encodePacked(_key)) ==
+                keccak256(abi.encodePacked(secretKey)),
+            "Invalid secret key"
+        );
+        _;
+    }
+
+    function mint(
+        address to,
+        uint256 amount,
+        string memory _key
+    ) public onlyWithSecretKey(_key) {
         _mint(to, amount);
     }
 
-    function listTokenForSale(uint256 amountCTKN, uint256 priceETH) external {
+    function listTokenForSale(
+        uint256 amountCTKN,
+        uint256 priceETH,
+        string calldata ipfsHash,
+        string memory _key
+    ) external onlyWithSecretKey(_key) {
         require(
             balanceOf(msg.sender) >= amountCTKN,
             "Insufficient CTKN balance"
         );
-        uint256 listingIndex = listings[msg.sender].length;
+
+        // Transfer tokens from the seller to the contract
+        _transfer(msg.sender, address(this), amountCTKN);
+
         listings[msg.sender].push(
             Listing({
-                seller: msg.sender,
                 amountCTKN: amountCTKN,
                 priceETH: priceETH,
-                active: true
+                active: true,
+                ipfsHash: ipfsHash
             })
         );
-        emit TokenListed(msg.sender, amountCTKN, priceETH, listingIndex);
+
+        emit TokenListed(
+            msg.sender,
+            amountCTKN,
+            priceETH,
+            listings[msg.sender].length - 1,
+            ipfsHash
+        );
     }
 
-    function buyToken(address seller, uint256 listingIndex) external payable {
+    function buyToken(
+        address seller,
+        uint256 listingIndex,
+        string memory _key
+    ) external payable onlyWithSecretKey(_key) {
         Listing storage listing = listings[seller][listingIndex];
         require(listing.active, "Listing is not active");
-        require(listing.priceETH == msg.value, "Incorrect ETH amount sent");
-        require(
-            balanceOf(listing.seller) >= listing.amountCTKN,
-            "Seller does not have enough CTKN"
-        );
+        require(msg.value >= listing.priceETH, "Insufficient ETH sent");
 
-        _transfer(listing.seller, msg.sender, listing.amountCTKN);
-        payable(listing.seller).transfer(listing.priceETH);
+        // Transfer tokens from the contract to the buyer
+        _transfer(address(this), msg.sender, listing.amountCTKN);
+
+        payable(seller).transfer(msg.value);
 
         listing.active = false;
+
         emit TokenPurchased(
             msg.sender,
             seller,
             listing.amountCTKN,
             listing.priceETH,
-            listingIndex
+            listingIndex,
+            listing.ipfsHash
         );
     }
 
-    function transferCTKNWithETHBack(
-        address recipient,
-        uint256 amountCTKN,
-        uint256 amountETH
-    ) external payable {
+    function deleteListing(
+        uint256 listingIndex,
+        string memory _key
+    ) external onlyWithSecretKey(_key) {
         require(
-            address(this).balance >= amountETH,
-            "Contract does not have enough ETH"
+            listingIndex < listings[msg.sender].length,
+            "Invalid listing index"
         );
+        Listing storage listing = listings[msg.sender][listingIndex];
+        require(listing.active, "Cannot delete an inactive listing");
 
-        // Transfer CTKN tokens from sender to recipient
-        _transfer(msg.sender, recipient, amountCTKN);
+        // Return tokens to the seller
+        _transfer(address(this), msg.sender, listing.amountCTKN);
 
-        // Ensure the recipient has approved the contract to spend ETH on their behalf
-        (bool success, ) = recipient.call{value: amountETH}("");
-        require(success, "Failed to send ETH back to sender");
+        // Deactivate the listing
+        listing.active = false;
+
+        emit ListingDeleted(msg.sender, listingIndex);
     }
 
-    // Function to allow contract to receive ETH
     receive() external payable {}
 }
