@@ -15,7 +15,7 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
     }
 
     mapping(address => Listing[]) public listings;
-    string private secretKey;
+    bytes32 private secretKeyHash;
 
     event TokenListed(
         address indexed seller,
@@ -44,13 +44,12 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
         Ownable(initialOwner)
         ERC20Permit("CarbonToken")
     {
-        secretKey = _secretKey;
+        secretKeyHash = keccak256(abi.encodePacked(_secretKey));
     }
 
     modifier onlyWithSecretKey(string memory _key) {
         require(
-            keccak256(abi.encodePacked(_key)) ==
-                keccak256(abi.encodePacked(secretKey)),
+            keccak256(abi.encodePacked(_key)) == secretKeyHash,
             "Invalid secret key"
         );
         _;

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import CarbonCreditTokenABI from "../CarbonToken.json"; // Add ABI JSON file
+import CarbonCreditTokenABI from "../CarbonToken.json"; // Ensure this ABI is up-to-date
 import { uploadFileToPinata } from "../PinataIPFS";
 import * as pdfjsLib from "pdfjs-dist/webpack";
 import { ToastContainer, toast } from "react-toastify";

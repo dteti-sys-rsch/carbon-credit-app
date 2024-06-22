@@ -18,11 +18,6 @@ export const uploadFileToPinata = async (file, setIsUploading) => {
 
   setIsUploading(true); // Set loading state to true
 
-  // const pinataOptions = JSON.stringify({
-  //   cidVersion: 0,
-  // });
-  // data.append("pinataOptions", pinataOptions);
-
   return axios
     .post(url, data, {
       maxContentLength: "Infinity",
@@ -42,20 +37,4 @@ export const uploadFileToPinata = async (file, setIsUploading) => {
       setIsUploading(false); // Set loading state to false
       throw error;
     });
-
-  // try {
-  //   const response = await axios.post(url, data, {
-  //     maxBodyLength: "Infinity", // Prevents Axios from erroring out on large files
-  //     headers: {
-  //       "Content-Type": `multipart/form-data; boundary=${data._boundary}`,
-  //       pinata_api_key: pinataApiKey,
-  //       pinata_secret_api_key: pinataSecretApiKey,
-  //     },
-  //   });
-
-  //   return response.data;
-  // } catch (error) {
-  //   console.error("Error uploading file to Pinata:", error);
-  //   throw error;
-  // }
 };

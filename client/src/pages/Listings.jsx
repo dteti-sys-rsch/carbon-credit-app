@@ -156,14 +156,9 @@ const Listings = ({ account, setAccount, setAccounts }) => {
   const handleBuy = async (seller, listingIndex, priceETH) => {
     if (token) {
       try {
-        const tx = await token.buyToken(
-          seller,
-          listingIndex,
-          {
-            value: ethers.utils.parseEther(priceETH),
-          },
-          secretKey
-        );
+        const tx = await token.buyToken(seller, listingIndex, secretKey, {
+          value: ethers.utils.parseEther(priceETH),
+        });
         await tx.wait();
         alert("Purchase successful!");
         fetchListings(token); // Refresh the listings
