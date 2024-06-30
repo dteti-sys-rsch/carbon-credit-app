@@ -7,35 +7,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
 contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
-    struct Listing {
-        uint256 amountCTKN;
-        uint256 priceETH;
-        bool active;
-        string ipfsHash;
-    }
-
-    mapping(address => Listing[]) public listings;
-    bytes32 private secretKeyHash;
-
-    event TokenListed(
-        address indexed seller,
-        uint256 amountCTKN,
-        uint256 priceETH,
-        uint256 listingIndex,
-        string ipfsHash
-    );
-
-    event TokenPurchased(
-        address indexed buyer,
-        address indexed seller,
-        uint256 amountCTKN,
-        uint256 priceETH,
-        uint256 listingIndex,
-        string ipfsHash
-    );
-
-    event ListingDeleted(address indexed seller, uint256 listingIndex);
-
     constructor(
         address initialOwner,
         string memory _secretKey
@@ -46,6 +17,32 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
     {
         secretKeyHash = keccak256(abi.encodePacked(_secretKey));
     }
+
+    struct Listing {
+        uint256 amountCTKN;
+        uint256 priceETH;
+        bool active;
+    }
+
+    mapping(address => Listing[]) public listings;
+    bytes32 private secretKeyHash;
+
+    event TokenListed(
+        address indexed seller,
+        uint256 amountCTKN,
+        uint256 priceETH,
+        uint256 listingIndex
+    );
+
+    event TokenPurchased(
+        address indexed buyer,
+        address indexed seller,
+        uint256 amountCTKN,
+        uint256 priceETH,
+        uint256 listingIndex
+    );
+
+    event ListingDeleted(address indexed seller, uint256 listingIndex);
 
     modifier onlyWithSecretKey(string memory _key) {
         require(
@@ -66,7 +63,6 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
     function listTokenForSale(
         uint256 amountCTKN,
         uint256 priceETH,
-        string calldata ipfsHash,
         string memory _key
     ) external onlyWithSecretKey(_key) {
         require(
@@ -78,20 +74,14 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
         _transfer(msg.sender, address(this), amountCTKN);
 
         listings[msg.sender].push(
-            Listing({
-                amountCTKN: amountCTKN,
-                priceETH: priceETH,
-                active: true,
-                ipfsHash: ipfsHash
-            })
+            Listing({amountCTKN: amountCTKN, priceETH: priceETH, active: true})
         );
 
         emit TokenListed(
             msg.sender,
             amountCTKN,
             priceETH,
-            listings[msg.sender].length - 1,
-            ipfsHash
+            listings[msg.sender].length - 1
         );
     }
 
@@ -116,8 +106,7 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
             seller,
             listing.amountCTKN,
             listing.priceETH,
-            listingIndex,
-            listing.ipfsHash
+            listingIndex
         );
     }
 
@@ -139,6 +128,10 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
         listing.active = false;
 
         emit ListingDeleted(msg.sender, listingIndex);
+    }
+
+    function updateSecretKey(string memory newSecretKey) external onlyOwner {
+        secretKeyHash = keccak256(abi.encodePacked(newSecretKey));
     }
 
     receive() external payable {}

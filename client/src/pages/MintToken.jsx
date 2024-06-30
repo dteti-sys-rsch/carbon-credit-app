@@ -1,49 +1,29 @@
 import React, { useEffect, useState } from "react";
-import { uploadFileToPinata } from "../PinataIPFS";
-import CarbonCreditTokenABI from "../CarbonToken.json"; // Add ABI JSON file
+import { uploadFileToPinata, deleteFileFromPinata } from "../utils/PinataIPFS";
+import * as pdfjsLib from "pdfjs-dist/webpack";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { connectToEthereum } from "../utils/Logic";
 
-const tokenAddress = process.env.REACT_APP_TOKEN_ADDRESS;
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+const secretKey = process.env.REACT_APP_SECRET_KEY;
 
-const MintToken = ({ setAccount, setAccounts, setBalances }) => {
+const MintToken = ({ account, setAccount }) => {
   const ethers = require("ethers");
-  const [ctknBalance, setCtknBalance] = useState(0);
-  const [amountCTKN, setAmountCTKN] = useState("");
-  const [priceETH, setPriceETH] = useState("");
-  const [token, setToken] = useState(null);
-  const [file, setFile] = useState(null);
+  const [mintAmount, setMintAmount] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [files, setFiles] = useState([null]);
+  const [IpfsHash, setIpfsHash] = useState("");
+  const [isTokensMinted, setTokensMinted] = useState();
+  const [isFileInvalid, setFileInvalid] = useState();
+  const [isDuplicate, setIsDuplicate] = useState();
 
   useEffect(() => {
     const init = async () => {
       try {
-        // Connect to Metamask
-        if (window.ethereum) {
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
-          await window.ethereum.request({ method: "eth_requestAccounts" });
-          const signer = provider.getSigner();
-          const account = await signer.getAddress();
-          setAccount(account);
-
-          // Connect to the CarbonCreditToken contract
-          const token = new ethers.Contract(
-            tokenAddress,
-            CarbonCreditTokenABI.abi,
-            signer
-          );
-          setToken(token);
-
-          // balance CTKN
-          const ctknBalance = await token.balanceOf(account);
-          setCtknBalance(ethers.utils.formatUnits(ctknBalance, 18));
-
-          // Get list of all accounts connected to MetaMask
-          const accounts = await provider.listAccounts();
-          setAccounts(accounts);
-          setIsLoading(false);
-        }
+        const { account } = await connectToEthereum();
+        setAccount(account);
       } catch (error) {
         console.error("Initialization failed", error);
       }
@@ -53,7 +33,7 @@ const MintToken = ({ setAccount, setAccounts, setBalances }) => {
 
   useEffect(() => {
     if (isUploading) {
-      toast.info("Uploading file to IPFS...", {
+      toast.info("Checking Certificate...", {
         autoClose: false,
       });
     } else {
@@ -61,90 +41,152 @@ const MintToken = ({ setAccount, setAccounts, setBalances }) => {
     }
   }, [isUploading]);
 
-  const handleListing = async (e) => {
-    e.preventDefault();
-    if (token && file) {
-      try {
-        // Upload file to IPFS
-        const result = await uploadFileToPinata(file, setIsUploading);
-        const ipfsHash = result.IpfsHash;
-
-        // List token for sale with IPFS hash
-        const tx = await token.listTokenForSale(
-          ethers.utils.parseUnits(amountCTKN, 18),
-          ethers.utils.parseEther(priceETH),
-          ipfsHash
-        );
-        await tx.wait();
-        alert("Listing and file upload successful!");
-      } catch (error) {
-        console.error("Listing and file upload failed", error);
-        alert("Listing and file upload failed: " + error.message);
-      }
+  useEffect(() => {
+    if (isDeleting) {
+      toast.error("Reverting Certificate", {
+        autoClose: false,
+      });
     } else {
-      alert("Please select a file and enter listing details first");
+      toast.dismiss();
     }
+  }, [isDeleting]);
+
+  useEffect(() => {
+    if (isTokensMinted === true) {
+      toast.success("Token CTKN Minted Successfully!", {
+        autoClose: true,
+      });
+    } else if (isTokensMinted === false) {
+      toast.success("Token CTKN Minted Successfully!", {
+        autoClose: true,
+      });
+    }
+  }, [isTokensMinted]);
+
+  useEffect(() => {
+    if (isFileInvalid) {
+      toast.error("Certificate cannot be verified. Document invalid.", {
+        autoClose: true,
+      });
+    } else {
+      toast.dismiss();
+    }
+  }, [isFileInvalid]);
+
+  useEffect(() => {
+    if (isDuplicate) {
+      toast.error(
+        "Certificate cannot be verified. Certificate already minted.",
+        {
+          autoClose: true,
+        }
+      );
+    } else {
+      toast.dismiss();
+    }
+  }, [isDuplicate]);
+
+  const extractMintAmountFromPdf = async (file) => {
+    if (file === undefined) return;
+    setFiles(file);
+
+    const reader = new FileReader();
+    reader.readAsArrayBuffer(file);
+    reader.onload = async () => {
+      const pdfData = new Uint8Array(reader.result);
+      const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+      let text = "";
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        textContent.items.forEach((item) => {
+          text += item.str + " ";
+        });
+      }
+
+      // Extracting the carbon offset value from the PDF text
+      const match = text.match(/(\d+(\.\d+)?)\s*MT\s*of\s*CO2\s*emissions/);
+      if (match) {
+        setMintAmount(`${match[1] * 1000}`);
+      } else {
+        setFileInvalid(true);
+      }
+      reader.onerror = (error) => {
+        console.error("Error reading PDF file:", error);
+      };
+    };
   };
 
-  const handleFileChange = (event) => {
-    setFile(event.target.files[0]);
-  };
+  const handleMint = async (e) => {
+    e.preventDefault();
+    if (!account || !mintAmount) {
+      alert("Please provide a certificate in PDF format that valid.");
+      return;
+    }
 
-  const mintTokens = async (token, account) => {
     try {
-      const amountToMint = ethers.utils.parseUnits("100", 18); // Example amount: 100 CTKN
-      const mintTx = await token.mint(account, amountToMint);
-      await mintTx.wait();
-      console.log(`Minted ${amountToMint} CTKN to ${account}`);
+      const { token } = await connectToEthereum();
+      const result = await uploadFileToPinata(files, setIsUploading);
+      setIpfsHash(result.IpfsHash);
+      if (result.isDuplicate) {
+        setIsDuplicate(true);
+        return;
+      }
+
+      // Mint the tokens
+      const tx = await token.mint(
+        account,
+        ethers.utils.parseUnits(mintAmount, 18),
+        secretKey
+      );
+      await tx.wait();
+      setTokensMinted(true);
     } catch (error) {
-      console.error("Failed to mint tokens", error);
+      console.error("Minting failed", error);
+      setTokensMinted(false);
+      try {
+        await deleteFileFromPinata(IpfsHash, setIsDeleting); // Delete the uploaded file from Pinata when transaction cancel/rejected
+      } catch (deleteError) {
+        console.error("Failed to delete file from Pinata", deleteError);
+      }
     }
   };
 
   return (
-    <div id="list-tokens" className="container mx-auto p-6">
+    <div className="container mx-auto p-6">
       <ToastContainer />
-      <div className="mb-8 p-6 bg-green-500 text-white rounded-2xl shadow-lg">
-        <div className="text-center text-2xl font-bold">
-          Carbon Credit Balance:{" "}
-          {isLoading ? `Loading...` : `${ctknBalance} CTKN`}
-        </div>
-      </div>
-      <div className="bg-white p-8 rounded-2xl shadow-lg">
-        <h2 className="text-2xl font-bold mb-6">List Tokens for Sale</h2>
-        <form onSubmit={handleListing} className="space-y-6">
-          <div>
-            <label className="block text-lg font-medium mb-2">
-              Amount to List:
-            </label>
-            <input
-              type="number"
-              value={amountCTKN}
-              onChange={(e) => [
-                setAmountCTKN(e.target.value),
-                setPriceETH(`${e.target.value * 0.01}`),
-              ]}
-              required
-              className="w-full p-2 border border-gray-300 rounded-lg"
-            />
+      <div className="mt-10 flex flex-col items-center">
+        <div className="flex flex-col items-center p-10 bg-[#E7F0DC] text-black rounded-2xl shadow-lg w-full max-w-md">
+          <div className="text-xl font-bold mb-4 text-center">
+            Mint Carbon Offset Certificates to CTKN
           </div>
-          <div>
-            <label className="block text-lg font-medium mb-2">
-              Upload File:
-            </label>
+          <form
+            onSubmit={handleMint}
+            className="flex flex-col items-center space-y-4 w-full"
+          >
             <input
               type="file"
-              onChange={handleFileChange}
-              className="w-full p-2 border border-gray-300 rounded-lg"
+              accept="application/pdf"
+              onChange={(e) => extractMintAmountFromPdf(e.target.files[0])}
+              className="p-2 border border-gray-400 rounded w-full"
             />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-green-500 text-white p-2 rounded-lg hover:bg-green-600"
-          >
-            List for Sale
-          </button>
-        </form>
+            <input
+              type="number"
+              placeholder="Amount"
+              value={mintAmount}
+              onChange={(e) => setMintAmount(e.target.value)}
+              className="p-2 border border-gray-400 rounded w-full text-black cursor-not-allowed"
+              readOnly
+            />
+            <button
+              type="submit"
+              className="p-2 bg-[#059212] text-white rounded w-full"
+            >
+              Mint Tokens
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

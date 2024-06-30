@@ -1,10 +1,8 @@
 import axios from "axios";
-import { useState } from "react";
 
 const pinataApiKey = process.env.REACT_APP_PINATA_API_KEY;
 const pinataSecretApiKey = process.env.REACT_APP_PINATA_SECRET_API_KEY;
 
-// https://purple-worthwhile-clownfish-2.mypinata.cloud
 export const uploadFileToPinata = async (file, setIsUploading) => {
   const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
 
@@ -16,7 +14,7 @@ export const uploadFileToPinata = async (file, setIsUploading) => {
   });
   data.append("pinataMetadata", metadata);
 
-  setIsUploading(true); // Set loading state to true
+  setIsUploading(true);
 
   return axios
     .post(url, data, {
@@ -29,12 +27,35 @@ export const uploadFileToPinata = async (file, setIsUploading) => {
     })
     .then(function (response) {
       console.log("File uploaded to Pinata: ", response.data);
-      setIsUploading(false); // Set loading state to false
-      return response.data;
+      setIsUploading(false);
+      return response.data; // Return the full response data
     })
     .catch(function (error) {
       console.error("Error uploading file to Pinata: ", error);
-      setIsUploading(false); // Set loading state to false
+      setIsUploading(false);
+      throw error;
+    });
+};
+
+export const deleteFileFromPinata = async (hash, setIsDeleting) => {
+  const url = `https://api.pinata.cloud/pinning/unpin/${hash}`;
+
+  setIsDeleting(true);
+
+  return axios
+    .delete(url, {
+      headers: {
+        pinata_api_key: pinataApiKey,
+        pinata_secret_api_key: pinataSecretApiKey,
+      },
+    })
+    .then(function (response) {
+      console.log("File deleted from Pinata: ", response.data);
+      setIsDeleting(false);
+    })
+    .catch(function (error) {
+      console.error("Error deleting file from Pinata: ", error);
+      setIsDeleting(false);
       throw error;
     });
 };

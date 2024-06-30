@@ -1,50 +1,30 @@
 import React, { useEffect, useState } from "react";
-import { uploadFileToPinata } from "../PinataIPFS";
-import CarbonCreditTokenABI from "../CarbonToken.json"; // Add ABI JSON file
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { connectToEthereum } from "../utils/Logic";
 
-const tokenAddress = process.env.REACT_APP_TOKEN_ADDRESS;
 const secretKey = process.env.REACT_APP_SECRET_KEY;
 
-const ListTokenForSale = ({ setAccount, setAccounts, setBalances }) => {
+const ListTokenForSale = ({ setAccount }) => {
   const ethers = require("ethers");
   const [ctknBalance, setCtknBalance] = useState(0);
   const [amountCTKN, setAmountCTKN] = useState("");
   const [priceETH, setPriceETH] = useState("");
   const [token, setToken] = useState(null);
-  const [file, setFile] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isListingCreated, setIsListingCreated] = useState();
 
   useEffect(() => {
     const init = async () => {
       try {
-        // Connect to Metamask
-        if (window.ethereum) {
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
-          await window.ethereum.request({ method: "eth_requestAccounts" });
-          const signer = provider.getSigner();
-          const account = await signer.getAddress();
-          setAccount(account);
+        const { account, token } = await connectToEthereum();
+        setAccount(account);
+        setToken(token);
 
-          // Connect to the CarbonCreditToken contract
-          const token = new ethers.Contract(
-            tokenAddress,
-            CarbonCreditTokenABI.abi,
-            signer
-          );
-          setToken(token);
-
-          // balance CTKN
-          const ctknBalance = await token.balanceOf(account);
-          setCtknBalance(ethers.utils.formatUnits(ctknBalance, 18));
-
-          // Get list of all accounts connected to MetaMask
-          const accounts = await provider.listAccounts();
-          setAccounts(accounts);
-          setIsLoading(false);
-        }
+        // get balance CTKN of account
+        const ctknBalance = await token.balanceOf(account);
+        setCtknBalance(ethers.utils.formatUnits(ctknBalance, 18));
+        setIsLoading(false);
       } catch (error) {
         console.error("Initialization failed", error);
       }
@@ -53,70 +33,46 @@ const ListTokenForSale = ({ setAccount, setAccounts, setBalances }) => {
   }, []);
 
   useEffect(() => {
-    if (isUploading) {
-      toast.info("Uploading file to IPFS...", {
-        autoClose: false,
+    if (isListingCreated === true) {
+      toast.success("Listing successfully created!", {
+        autoClose: true,
       });
-    } else {
-      toast.dismiss();
+    } else if (isListingCreated === false) {
+      toast.error("Listing error!", {
+        autoClose: true,
+      });
     }
-  }, [isUploading]);
+  }, [isListingCreated]);
 
   const handleListing = async (e) => {
     e.preventDefault();
-    // if (token && file) {
-    //   try {
-    //     // Upload file to IPFS
-    //     const result = await uploadFileToPinata(file, setIsUploading);
-    //     const ipfsHash = result.IpfsHash;
-
-    //     // List token for sale with IPFS hash
-    //     const tx = await token.listTokenForSale(
-    //       ethers.utils.parseUnits(amountCTKN, 18),
-    //       ethers.utils.parseEther(priceETH),
-    //       ipfsHash
-    //     );
-    //     await tx.wait();
-    //     alert("Listing and file upload successful!");
-    //   } catch (error) {
-    //     console.error("Listing and file upload failed", error);
-    //     alert("Listing and file upload failed: " + error.message);
-    //   }
     if (token) {
       try {
-        // Upload file to IPFS
-        // const result = await uploadFileToPinata(file, setIsUploading);
-        const ipfsHash = "";
-
-        // List token for sale with IPFS hash
         const tx = await token.listTokenForSale(
           ethers.utils.parseUnits(amountCTKN, 18),
           ethers.utils.parseEther(priceETH),
-          ipfsHash,
           secretKey
         );
         await tx.wait();
-        alert("Listing and file upload successful!");
+        setIsListingCreated(true);
       } catch (error) {
-        console.error("Listing and file upload failed", error);
-        alert("Listing and file upload failed: " + error.message);
+        setIsListingCreated(false);
+        console.error("Listing failed to be created", error);
       }
     } else {
-      alert("Please select a file and enter listing details first");
+      alert("Please connect wallet first.");
     }
-  };
-
-  const handleFileChange = (event) => {
-    setFile(event.target.files[0]);
   };
 
   return (
     <div id="list-tokens" className="container mx-auto p-6">
       <ToastContainer />
-      <div className="mb-8 p-6 bg-green-500 text-white rounded-2xl shadow-lg">
-        <div className="text-center text-2xl font-bold">
-          Carbon Credit Balance:{" "}
-          {isLoading ? `Loading...` : `${ctknBalance} CTKN`}
+      <div className="mb-8 p-6 bg-[#254336] text-white rounded-2xl shadow-lg">
+        <div className="text-center text-2xl font-normal">
+          Carbon Token Balance:{" "}
+          <span className="font-bold">
+            {isLoading ? `Loading...` : `${ctknBalance} CTKN`}
+          </span>
         </div>
       </div>
       <div className="bg-white p-8 rounded-2xl shadow-lg">
@@ -127,29 +83,20 @@ const ListTokenForSale = ({ setAccount, setAccounts, setBalances }) => {
               Amount to List:
             </label>
             <input
+              placeholder="Enter amount of CTKN to list"
               type="number"
               value={amountCTKN}
               onChange={(e) => [
                 setAmountCTKN(e.target.value),
-                setPriceETH(`${e.target.value * 0.01}`),
+                setPriceETH(`${e.target.value * 0.0001}`),
               ]}
               required
               className="w-full p-2 border border-gray-300 rounded-lg"
             />
           </div>
-          {/* <div>
-            <label className="block text-lg font-medium mb-2">
-              Upload File:
-            </label>
-            <input
-              type="file"
-              onChange={handleFileChange}
-              className="w-full p-2 border border-gray-300 rounded-lg"
-            />
-          </div> */}
           <button
             type="submit"
-            className="w-full bg-green-500 text-white p-2 rounded-lg hover:bg-green-600"
+            className="w-full bg-[#79AC78] text-[#000] p-2 rounded-lg hover:bg-green-600"
           >
             List for Sale
           </button>

@@ -1,14 +1,10 @@
 import { useEffect, useState } from "react";
-import { uploadFileToPinata } from "../PinataIPFS";
-import CarbonCreditTokenABI from "../CarbonToken.json"; // Add ABI JSON file
+import { connectToEthereum } from "../utils/Logic";
 
-const tokenAddress = process.env.REACT_APP_TOKEN_ADDRESS;
 const secretKey = process.env.REACT_APP_SECRET_KEY;
 
-const PurchasedListings = ({ setAccount, setAccounts }) => {
+const MyToken = ({ setAccount }) => {
   const ethers = require("ethers");
-  const [amountCTKN, setAmountCTKN] = useState("");
-  const [priceETH, setPriceETH] = useState("");
   const [token, setToken] = useState(null);
   const [purchasedListings, setPurchasedListings] = useState([]);
   const [soldListings, setSoldListings] = useState([]);
@@ -35,7 +31,6 @@ const PurchasedListings = ({ setAccount, setAccounts }) => {
         const amountCTKN = ethers.utils.formatUnits(event.args.amountCTKN, 18);
         const priceETH = ethers.utils.formatEther(event.args.priceETH);
         const listingIndex = event.args.listingIndex.toNumber();
-        const ipfsHash = event.args.ipfsHash;
 
         if (!activeListingsMap[seller]) {
           activeListingsMap[seller] = [];
@@ -46,7 +41,6 @@ const PurchasedListings = ({ setAccount, setAccounts }) => {
           priceETH,
           active: true,
           listingIndex,
-          ipfsHash,
         });
       });
 
@@ -87,7 +81,6 @@ const PurchasedListings = ({ setAccount, setAccounts }) => {
               amountCTKN: listing.amountCTKN,
               priceETH: listing.priceETH,
               listingIndex: listing.listingIndex,
-              ipfsHash: listing.ipfsHash,
               active: true,
             });
           }
@@ -121,7 +114,6 @@ const PurchasedListings = ({ setAccount, setAccounts }) => {
         amountCTKN: ethers.utils.formatUnits(event.args.amountCTKN, 18),
         priceETH: ethers.utils.formatEther(event.args.priceETH),
         listingIndex: event.args.listingIndex.toNumber(),
-        ipfsHash: event.args.ipfsHash,
       }));
 
       setPurchasedListings(purchasedListings);
@@ -140,7 +132,6 @@ const PurchasedListings = ({ setAccount, setAccounts }) => {
         buyer: event.args.buyer,
         amountCTKN: ethers.utils.formatUnits(event.args.amountCTKN, 18),
         priceETH: ethers.utils.formatEther(event.args.priceETH),
-        ipfsHash: event.args.ipfsHash,
       }));
       setSoldListings(soldListings);
       setIsLoadingSold(false);
@@ -152,31 +143,14 @@ const PurchasedListings = ({ setAccount, setAccounts }) => {
   useEffect(() => {
     const init = async () => {
       try {
-        // Connect to Metamask
-        if (window.ethereum) {
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
-          await window.ethereum.request({ method: "eth_requestAccounts" });
-          const signer = provider.getSigner();
-          const account = await signer.getAddress();
-          setAccount(account);
+        const { account, token } = await connectToEthereum();
+        setAccount(account);
+        setToken(token);
 
-          // Connect to the CarbonCreditToken contract
-          const token = new ethers.Contract(
-            tokenAddress,
-            CarbonCreditTokenABI.abi,
-            signer
-          );
-          setToken(token);
-
-          // fetch available listings
-          fetchListings(token, account);
-          fetchPurchasedListings(token, account);
-          fetchSoldListings(token, account);
-
-          // Get list of all accounts connected to MetaMask
-          const accounts = await provider.listAccounts();
-          setAccounts(accounts);
-        }
+        // fetch available listings
+        fetchListings(token, account);
+        fetchPurchasedListings(token, account);
+        fetchSoldListings(token, account);
       } catch (error) {
         console.error("Initialization failed", error);
       }
@@ -190,7 +164,7 @@ const PurchasedListings = ({ setAccount, setAccounts }) => {
         const tx = await token.deleteListing(listingIndex, secretKey);
         await tx.wait();
         alert("Listing deleted successfully!");
-        fetchListings(token); // Refresh the listings
+        fetchListings(token);
       } catch (error) {
         console.error("Deletion failed", error);
         alert("Deletion failed: " + error.message);
@@ -202,102 +176,66 @@ const PurchasedListings = ({ setAccount, setAccounts }) => {
 
   return (
     <div id="purchased-listings" className="container mx-auto p-6">
-      <h2 className="text-3xl font-bold text-center mb-6">My Listings</h2>
-      <ul className="space-y-4">
+      <h2 className="text-3xl font-bold text-center mb-6">My CTKN Listings</h2>
+      <div className="space-y-4">
         {isLoadingAvailable ? (
           <div>Loading...</div>
         ) : listings.length > 0 ? (
           listings.map((listing, index) => (
-            <li key={index} className="bg-white p-6 rounded-lg shadow-lg">
+            <div key={index} className="bg-white p-6 rounded-lg shadow-lg">
               <p className="text-lg font-semibold">Seller: {listing.seller}</p>
               <p>Amount: {listing.amountCTKN} CTKN</p>
               <p>Price: {listing.priceETH} ETH</p>
-
-              <div>
-                <>
-                  <p>
-                    File:{" "}
-                    <a
-                      href={`https://gateway.pinata.cloud/ipfs/${listing.ipfsHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:underline"
-                    >
-                      View File
-                    </a>
-                  </p>
-                  <button
-                    onClick={() => handleDelete(listing.listingIndex)}
-                    className="bg-red-500 text-white px-4 py-2 mt-2 rounded-lg hover:bg-red-600"
-                  >
-                    Delete
-                  </button>
-                </>
-              </div>
-            </li>
+              <button
+                onClick={() => handleDelete(listing.listingIndex)}
+                className="bg-red-500 text-white px-4 py-2 mt-2 rounded-lg hover:bg-red-600"
+              >
+                Delete
+              </button>
+            </div>
           ))
         ) : (
-          <div>No listings available</div>
+          <div className="text-lg">No listings has been made.</div>
         )}
-      </ul>
-      <h2 className="text-3xl font-bold text-center mb-6">
+      </div>
+      <h2 className="text-3xl font-bold text-center mb-6 pt-8">
         Purchased Listings
       </h2>
-      <ul className="space-y-4">
+      <div className="space-y-4">
         {isLoading ? (
           <div>Loading...</div>
         ) : purchasedListings.length > 0 ? (
           purchasedListings.map((listing, index) => (
-            <li key={index} className="bg-white p-6 rounded-lg shadow-lg">
+            <div key={index} className="bg-white p-6 rounded-lg shadow-lg">
               <p className="text-lg font-semibold">Seller: {listing.seller}</p>
               <p>Amount: {listing.amountCTKN} CTKN</p>
               <p>Price: {listing.priceETH} ETH</p>
-              <p>
-                File:{" "}
-                <a
-                  href={`https://gateway.pinata.cloud/ipfs/${listing.ipfsHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-500 hover:underline"
-                >
-                  View File
-                </a>
-              </p>
-            </li>
+            </div>
           ))
         ) : (
-          <div>No Purchased Listings found.</div>
+          <div className="text-lg">No listings been purchased.</div>
         )}
-      </ul>
-      <h2 className="text-3xl font-bold text-center mb-6">Sold Listings</h2>
-      <ul className="space-y-4">
+      </div>
+      <h2 className="text-3xl font-bold text-center mb-6 pt-8">
+        Sold Listings
+      </h2>
+      <div className="space-y-4">
         {isLoadingSold ? (
           <div>Loading...</div>
         ) : soldListings.length > 0 ? (
           soldListings.map((listing, index) => (
-            <li key={index} className="bg-white p-6 rounded-lg shadow-lg">
+            <div key={index} className="bg-white p-6 rounded-lg shadow-lg">
               <p className="text-lg font-semibold">Buyer: {listing.buyer}</p>
               <p>Amount: {listing.amountCTKN} CTKN</p>
               <p>Price: {listing.priceETH} ETH</p>
-              <p>
-                File:{" "}
-                <a
-                  href={`https://gateway.pinata.cloud/ipfs/${listing.ipfsHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-500 hover:underline"
-                >
-                  View File
-                </a>
-              </p>
-            </li>
+            </div>
           ))
         ) : (
-          <div>No Sold Listings found.</div>
+          <div className="text-lg">No listings currently sold.</div>
         )}
-      </ul>
+      </div>
     </div>
   );
 };
 
-export default PurchasedListings;
+export default MyToken;

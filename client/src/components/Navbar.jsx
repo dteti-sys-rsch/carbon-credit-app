@@ -1,22 +1,17 @@
 import { Link } from "react-router-dom";
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Disclosure,
   DisclosureButton,
   DisclosurePanel,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuItems,
-  Transition,
 } from "@headlessui/react";
-import { Bars3Icon, BellIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 
 const navigation = [
   { name: "Home", href: "/", current: false },
-  { name: "Credits", href: "/listings", current: false },
-  { name: "Purchased Listings", href: "/purchased-listings", current: false },
+  { name: "Credits", href: "/credits", current: false },
   { name: "Sale Token", href: "/sale-token", current: false },
+  { name: "My Token", href: "/my-token", current: false },
 ];
 
 function classNames(...classes) {
@@ -30,17 +25,17 @@ const shortenText = (text, maxLength) => {
   return `${text.slice(0, half)}...${text.slice(-half)}`;
 };
 
-const Navbar = ({ account, accounts, balances }) => {
+const Navbar = ({ account }) => {
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
-    if (accounts.length === 0) {
+    if (account.length === 0) {
       setIsLoading(true);
     } else {
       setIsLoading(false);
     }
   });
   return (
-    <Disclosure as="nav" className="bg-gray-800">
+    <Disclosure as="nav" className="bg-[#AFD198]">
       {({ open }) => (
         <>
           <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
@@ -60,7 +55,7 @@ const Navbar = ({ account, accounts, balances }) => {
               <div className="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">
                 <div className="flex flex-shrink-0 items-center">
                   <Link to="/">
-                    <p className="text-white">Carbon Trading App</p>
+                    <p className="text-[#000]">Carbon Trading App</p>
                   </Link>
                 </div>
                 <div className="hidden sm:ml-6 md:ml-auto sm:block">
@@ -71,8 +66,8 @@ const Navbar = ({ account, accounts, balances }) => {
                           key={item.name}
                           className={classNames(
                             item.current
-                              ? "bg-gray-900 text-white"
-                              : "text-gray-300 hover:bg-gray-700 hover:text-white",
+                              ? "bg-gray-900 text-black"
+                              : "text-[#000] hover:bg-[#D8EFD3] hover:text-black",
                             "rounded-md px-3 py-2 text-sm font-medium"
                           )}
                           aria-current={item.current ? "page" : undefined}
@@ -84,7 +79,7 @@ const Navbar = ({ account, accounts, balances }) => {
                     <p
                       key={account}
                       className={classNames(
-                        "text-gray-300 hover:bg-gray-700 hover:text-white rounded-md px-3 py-2 text-sm font-medium"
+                        "text-[#000] hover:bg-[#D8EFD3] hover:text-black rounded-md px-3 py-2 text-sm font-medium"
                       )}
                     >
                       {isLoading
@@ -94,45 +89,6 @@ const Navbar = ({ account, accounts, balances }) => {
                   </div>
                 </div>
               </div>
-              {/* <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
-                <Menu as="div" className="relative ml-3">
-                  <div>
-                    <MenuButton className="relative flex rounded-full bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800">
-                      <span className="absolute -inset-1.5" />
-                      <span className="sr-only">Open user menu</span>
-                      <img
-                        className="h-8 w-8 rounded-full"
-                        src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                        alt=""
-                      />
-                    </MenuButton>
-                  </div>
-                  <Transition
-                    enter="transition ease-out duration-100"
-                    enterFrom="transform opacity-0 scale-95"
-                    enterTo="transform opacity-100 scale-100"
-                    leave="transition ease-in duration-75"
-                    leaveFrom="transform opacity-100 scale-100"
-                    leaveTo="transform opacity-0 scale-95"
-                  >
-                    <MenuItems className="absolute right-0 z-10 mt-2 w-96 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                      <MenuItem>
-                        {({ focus }) => (
-                          <p
-                            className={classNames(
-                              focus ? "bg-gray-100" : "",
-                              "block px-4 py-2 text-sm text-gray-700 break-words"
-                            )}
-                          >
-                            Hello, <br />
-                            {account}
-                          </p>
-                        )}
-                      </MenuItem>
-                    </MenuItems>
-                  </Transition>
-                </Menu>
-              </div> */}
             </div>
           </div>
 
@@ -145,8 +101,8 @@ const Navbar = ({ account, accounts, balances }) => {
                   href={item.href}
                   className={classNames(
                     item.current
-                      ? "bg-gray-900 text-white"
-                      : "text-gray-300 hover:bg-gray-700 hover:text-white",
+                      ? "bg-gray-900 text-black"
+                      : "text-[#000] hover:bg-[#D8EFD3] hover:text-black",
                     "block rounded-md px-3 py-2 text-base font-medium"
                   )}
                   aria-current={item.current ? "page" : undefined}

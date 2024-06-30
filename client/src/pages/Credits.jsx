@@ -1,19 +1,13 @@
 import { useEffect, useState } from "react";
-import { uploadFileToPinata } from "../PinataIPFS";
-import CarbonCreditTokenABI from "../CarbonToken.json"; // Add ABI JSON file
+import { connectToEthereum } from "../utils/Logic";
 
-const tokenAddress = process.env.REACT_APP_TOKEN_ADDRESS;
 const secretKey = process.env.REACT_APP_SECRET_KEY;
 
-const Listings = ({ account, setAccount, setAccounts }) => {
+const Credits = ({ account, setAccount }) => {
   const ethers = require("ethers");
-  const [amountCTKN, setAmountCTKN] = useState("");
-  const [priceETH, setPriceETH] = useState("");
   const [token, setToken] = useState(null);
   const [listings, setListings] = useState([]);
-  const [soldListings, setSoldListings] = useState([]);
   const [isLoadingAvailable, setIsLoadingAvailable] = useState(true);
-  const [isLoadingSold, setIsLoadingSold] = useState(true);
 
   const fetchListings = async (token, account) => {
     try {
@@ -33,7 +27,6 @@ const Listings = ({ account, setAccount, setAccounts }) => {
         const amountCTKN = ethers.utils.formatUnits(event.args.amountCTKN, 18);
         const priceETH = ethers.utils.formatEther(event.args.priceETH);
         const listingIndex = event.args.listingIndex.toNumber();
-        const ipfsHash = event.args.ipfsHash;
 
         if (!activeListingsMap[seller]) {
           activeListingsMap[seller] = [];
@@ -44,7 +37,6 @@ const Listings = ({ account, setAccount, setAccounts }) => {
           priceETH,
           active: true,
           listingIndex,
-          ipfsHash,
         });
       });
 
@@ -85,7 +77,6 @@ const Listings = ({ account, setAccount, setAccounts }) => {
               amountCTKN: listing.amountCTKN,
               priceETH: listing.priceETH,
               listingIndex: listing.listingIndex,
-              ipfsHash: listing.ipfsHash,
               active: true,
             });
           }
@@ -99,53 +90,13 @@ const Listings = ({ account, setAccount, setAccounts }) => {
     }
   };
 
-  const fetchSoldListings = async (token, account) => {
-    try {
-      const soldListingEvents = await token.queryFilter(
-        token.filters.TokenPurchased(null, account)
-      );
-      const soldListings = soldListingEvents.map((event) => {
-        return {
-          buyer: event.args.buyer,
-          amountCTKN: ethers.utils.formatUnits(event.args.amountCTKN, 18),
-          priceETH: ethers.utils.formatEther(event.args.priceETH),
-          ipfsHash: event.args.ipfsHash,
-        };
-      });
-      setSoldListings(soldListings);
-      setIsLoadingSold(false);
-    } catch (error) {
-      console.error("Failed to fetch sold listings", error);
-    }
-  };
-
   useEffect(() => {
     const init = async () => {
       try {
-        // Connect to Metamask
-        if (window.ethereum) {
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
-          await window.ethereum.request({ method: "eth_requestAccounts" });
-          const signer = provider.getSigner();
-          const account = await signer.getAddress();
-          setAccount(account);
-
-          // Connect to the CarbonCreditToken contract
-          const token = new ethers.Contract(
-            tokenAddress,
-            CarbonCreditTokenABI.abi,
-            signer
-          );
-          setToken(token);
-
-          // fetch available listings
-          fetchListings(token, account);
-          fetchSoldListings(token, account);
-
-          // Get list of all accounts connected to MetaMask
-          const accounts = await provider.listAccounts();
-          setAccounts(accounts);
-        }
+        const { account, token } = await connectToEthereum();
+        setAccount(account);
+        setToken(token);
+        fetchListings(token, account);
       } catch (error) {
         console.error("Initialization failed", error);
       }
@@ -161,27 +112,10 @@ const Listings = ({ account, setAccount, setAccounts }) => {
         });
         await tx.wait();
         alert("Purchase successful!");
-        fetchListings(token); // Refresh the listings
-        fetchSoldListings(token, account); // Refresh the sold listings
+        fetchListings(token);
       } catch (error) {
         console.error("Purchase failed", error);
         alert("Purchase failed: " + error.message);
-      }
-    } else {
-      alert("Please connect your wallet first");
-    }
-  };
-
-  const handleDelete = async (listingIndex) => {
-    if (token) {
-      try {
-        const tx = await token.deleteListing(listingIndex);
-        await tx.wait();
-        alert("Listing deleted successfully!");
-        fetchListings(token); // Refresh the listings
-      } catch (error) {
-        console.error("Deletion failed", error);
-        alert("Deletion failed: " + error.message);
       }
     } else {
       alert("Please connect your wallet first");
@@ -200,29 +134,7 @@ const Listings = ({ account, setAccount, setAccounts }) => {
               <p className="text-lg font-semibold">Seller: {listing.seller}</p>
               <p>Amount: {listing.amountCTKN} CTKN</p>
               <p>Price: {listing.priceETH} ETH</p>
-
               <div>
-                {listing.seller === account && listing.active && (
-                  <>
-                    <p>
-                      File:{" "}
-                      <a
-                        href={`https://gateway.pinata.cloud/ipfs/${listing.ipfsHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline"
-                      >
-                        View File
-                      </a>
-                    </p>
-                    <button
-                      onClick={() => handleDelete(listing.listingIndex)}
-                      className="bg-red-500 text-white px-4 py-2 mt-2 rounded-lg hover:bg-red-600"
-                    >
-                      Delete
-                    </button>
-                  </>
-                )}
                 {listing.seller !== account && listing.active && (
                   <button
                     onClick={() =>
@@ -241,11 +153,11 @@ const Listings = ({ account, setAccount, setAccounts }) => {
             </li>
           ))
         ) : (
-          <div>No listings available</div>
+          <div className="text-lg">No credits of CTKN available right now.</div>
         )}
       </ul>
     </div>
   );
 };
 
-export default Listings;
+export default Credits;
