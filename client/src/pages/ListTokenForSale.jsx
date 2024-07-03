@@ -60,7 +60,7 @@ const ListTokenForSale = ({ setAccount }) => {
         toast.error("Listing failed to be created, ", error);
       }
     } else {
-      alert("Please connect wallet first.");
+      toast.warn("Please connect wallet first.");
     }
   };
 

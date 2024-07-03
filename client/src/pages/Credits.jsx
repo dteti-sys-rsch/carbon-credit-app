@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 import { connectToEthereum } from "../utils/Logic";
 import { ToastContainer, toast } from "react-toastify";
+import CryptoJS from "crypto-js";
 
 const secretKey = process.env.REACT_APP_SECRET_KEY;
+const getHashedKey = (key) => {
+  return CryptoJS.SHA256(key).toString(CryptoJS.enc.Hex);
+};
 
 const Credits = ({ account, setAccount }) => {
   const ethers = require("ethers");
@@ -108,18 +112,23 @@ const Credits = ({ account, setAccount }) => {
   const handleBuy = async (seller, listingIndex, priceETH) => {
     if (token) {
       try {
-        const tx = await token.buyToken(seller, listingIndex, secretKey, {
-          value: ethers.utils.parseEther(priceETH),
-        });
+        const tx = await token.buyToken(
+          seller,
+          listingIndex,
+          getHashedKey(secretKey),
+          {
+            value: ethers.utils.parseEther(priceETH),
+          }
+        );
         await tx.wait();
-        alert("Purchase successful!");
+        toast.success("Purchase successful!");
         fetchListings(token);
       } catch (error) {
         toast.error("Purchase failed, ", error);
-        alert("Purchase failed: " + error.message);
+        toast.error("Purchase failed: " + error.message);
       }
     } else {
-      alert("Please connect your wallet first");
+      toast.warn("Please connect your wallet first");
     }
   };
 

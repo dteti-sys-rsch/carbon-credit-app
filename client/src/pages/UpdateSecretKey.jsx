@@ -17,7 +17,7 @@ const UpdateSecretKey = ({}) => {
   const handleUpdateSecretKey = async (e) => {
     e.preventDefault();
     if (!newSecretKey) {
-      alert("Please provide a new secret key");
+      toast.warn("Please provide a new secret key");
       return;
     }
 
@@ -35,11 +35,10 @@ const UpdateSecretKey = ({}) => {
         // Update the secret key
         const tx = await token.updateSecretKey(newSecretKey);
         await tx.wait();
-        alert("Secret key updated successfully");
+        toast.success("Secret key updated successfully");
       }
     } catch (error) {
       toast.error("Updating secret key failed, ", error);
-      alert("Updating secret key failed");
     }
   };
 

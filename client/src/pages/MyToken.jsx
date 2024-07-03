@@ -169,14 +169,13 @@ const MyToken = ({ setAccount }) => {
       try {
         const tx = await token.deleteListing(listingIndex, secretKey);
         await tx.wait();
-        alert("Listing deleted successfully!");
+        toast.success("Listing deleted successfully!");
         fetchListings(token);
       } catch (error) {
-        toast.error("Deletion failed, ", error);
-        alert("Deletion failed: " + error.message);
+        toast.error("Deletion failed, ", error.message);
       }
     } else {
-      alert("Please connect your wallet first");
+      toast.warn("Please connect your wallet first");
     }
   };
 
