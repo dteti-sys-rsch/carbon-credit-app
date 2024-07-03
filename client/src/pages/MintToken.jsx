@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { uploadFileToPinata, deleteFileFromPinata } from "../utils/PinataIPFS";
-import * as pdfjsLib from "pdfjs-dist/webpack";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { connectToEthereum } from "../utils/Logic";
-
+import * as pdfjsLib from "pdfjs-dist/webpack";
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
 const secretKey = process.env.REACT_APP_SECRET_KEY;
 
 const MintToken = ({ account, setAccount }) => {
@@ -14,22 +14,38 @@ const MintToken = ({ account, setAccount }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [files, setFiles] = useState([null]);
-  const [IpfsHash, setIpfsHash] = useState("");
   const [isTokensMinted, setTokensMinted] = useState();
-  const [isFileInvalid, setFileInvalid] = useState();
+  const [isFileInvalid, setFileInvalid] = useState(false);
   const [isDuplicate, setIsDuplicate] = useState();
+  const [mintingHistory, setMintingHistory] = useState([]);
+  const [token, setToken] = useState(null);
+
+  const fetchMintingHistory = async (token, account) => {
+    const filter = token.filters.CertificateMinted();
+    const events = await token.queryFilter(filter);
+    return events.map((event) => ({
+      account: event.args.account,
+      amount: ethers.utils.formatUnits(event.args.amount, 18),
+      ipfsHash: event.args.ipfsHash,
+      transactionHash: event.transactionHash,
+    }));
+  };
 
   useEffect(() => {
     const init = async () => {
       try {
-        const { account } = await connectToEthereum();
+        const { account, token } = await connectToEthereum();
         setAccount(account);
+        setToken(token);
+
+        const history = await fetchMintingHistory(token, account);
+        setMintingHistory(history);
       } catch (error) {
-        console.error("Initialization failed", error);
+        toast.error(error.message);
       }
     };
     init();
-  }, []);
+  }, [fetchMintingHistory]);
 
   useEffect(() => {
     if (isUploading) {
@@ -43,7 +59,7 @@ const MintToken = ({ account, setAccount }) => {
 
   useEffect(() => {
     if (isDeleting) {
-      toast.error("Reverting Certificate", {
+      toast.error("Mint Token CTKN Failed, Reverting Certificate...", {
         autoClose: false,
       });
     } else {
@@ -53,10 +69,6 @@ const MintToken = ({ account, setAccount }) => {
 
   useEffect(() => {
     if (isTokensMinted === true) {
-      toast.success("Token CTKN Minted Successfully!", {
-        autoClose: true,
-      });
-    } else if (isTokensMinted === false) {
       toast.success("Token CTKN Minted Successfully!", {
         autoClose: true,
       });
@@ -88,6 +100,9 @@ const MintToken = ({ account, setAccount }) => {
 
   const extractMintAmountFromPdf = async (file) => {
     if (file === undefined) return;
+
+    setMintAmount("");
+    setFileInvalid(false);
     setFiles(file);
 
     const reader = new FileReader();
@@ -113,22 +128,26 @@ const MintToken = ({ account, setAccount }) => {
         setFileInvalid(true);
       }
       reader.onerror = (error) => {
-        console.error("Error reading PDF file:", error);
+        toast.error("Error reading PDF file, ", error);
       };
     };
   };
 
   const handleMint = async (e) => {
     e.preventDefault();
-    if (!account || !mintAmount) {
-      alert("Please provide a certificate in PDF format that valid.");
+    if (!mintAmount) {
+      toast.error("Please provide a certificate in PDF format that valid.");
       return;
+    } else if (!account) {
+      toast.error("Account not connected.");
     }
+
+    let ipfsHash = "";
 
     try {
       const { token } = await connectToEthereum();
       const result = await uploadFileToPinata(files, setIsUploading);
-      setIpfsHash(result.IpfsHash);
+      ipfsHash = result.IpfsHash;
       if (result.isDuplicate) {
         setIsDuplicate(true);
         return;
@@ -138,40 +157,48 @@ const MintToken = ({ account, setAccount }) => {
       const tx = await token.mint(
         account,
         ethers.utils.parseUnits(mintAmount, 18),
-        secretKey
+        secretKey,
+        ipfsHash
       );
       await tx.wait();
       setTokensMinted(true);
     } catch (error) {
-      console.error("Minting failed", error);
       setTokensMinted(false);
       try {
-        await deleteFileFromPinata(IpfsHash, setIsDeleting); // Delete the uploaded file from Pinata when transaction cancel/rejected
+        await deleteFileFromPinata(ipfsHash, setIsDeleting); // Delete the uploaded file from Pinata when transaction cancel/rejected
       } catch (deleteError) {
-        console.error("Failed to delete file from Pinata", deleteError);
+        toast.error("Failed to delete file from Pinata, ", deleteError);
       }
     }
   };
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto px-12 py-8 md:px-20">
       <ToastContainer />
-      <div className="mt-10 flex flex-col items-center">
-        <div className="flex flex-col items-center p-10 bg-[#E7F0DC] text-black rounded-2xl shadow-lg w-full max-w-md">
+      <div className="mt-10 flex flex-row row-auto items-center gap-8">
+        <div className="flex flex-col items-center p-10 bg-[#E7F0DC] text-black rounded-2xl shadow-lg w-full self-start">
           <div className="text-xl font-bold mb-4 text-center">
-            Mint Carbon Offset Certificates to CTKN
+            Mint Carbon Quota Certificates to CTKN
           </div>
           <form
             onSubmit={handleMint}
             className="flex flex-col items-center space-y-4 w-full"
           >
+            <label className="self-start text-left" for="certificate">
+              Choose Certificate File (PDF)
+            </label>
             <input
+              id="certificate"
               type="file"
               accept="application/pdf"
               onChange={(e) => extractMintAmountFromPdf(e.target.files[0])}
               className="p-2 border border-gray-400 rounded w-full"
             />
+            <label className="self-start text-left" for="amountCTKN">
+              Amount CTKN
+            </label>
             <input
+              id="amountCTKN"
               type="number"
               placeholder="Amount"
               value={mintAmount}
@@ -181,11 +208,44 @@ const MintToken = ({ account, setAccount }) => {
             />
             <button
               type="submit"
-              className="p-2 bg-[#059212] text-white rounded w-full"
+              className="p-2 bg-[#79AC78] text-[#000] rounded w-full hover:bg-[#254336] hover:text-white transition duration-300 ease-in-out"
             >
               Mint Tokens
             </button>
           </form>
+        </div>
+        <div className="w-full self-start">
+          <h2 className="text-xl font-bold mb-4 text-center">
+            Minting History
+          </h2>
+          {mintingHistory.length === 0 ? (
+            <p>No minting history found.</p>
+          ) : (
+            <ul>
+              {mintingHistory.map((entry, index) => (
+                <li key={index} className="p-4 border-b border-gray-300">
+                  <p>Account: {entry.account}</p>
+                  <p className="mb-3">Amount: {entry.amount} CTKN</p>
+                  <a
+                    href={`https://gateway.pinata.cloud/ipfs/${entry.ipfsHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-[#06D001] text-[#000] px-4 py-2 mt-2 rounded-lg hover:bg-[#9BEC00] transition duration-300 ease-in-out"
+                  >
+                    View Certificate
+                  </a>
+                  <a
+                    href={`https://sepolia.etherscan.io/tx/${entry.transactionHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-[#071952] text-[#fff] px-4 py-2 mt-2 rounded-lg hover:bg-[#088395] transition duration-300 ease-in-out ml-3"
+                  >
+                    View on Etherscan
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>

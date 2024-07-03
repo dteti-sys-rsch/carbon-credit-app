@@ -26,7 +26,7 @@ const ListTokenForSale = ({ setAccount }) => {
         setCtknBalance(ethers.utils.formatUnits(ctknBalance, 18));
         setIsLoading(false);
       } catch (error) {
-        console.error("Initialization failed", error);
+        toast.error(error.message);
       }
     };
     init();
@@ -57,7 +57,7 @@ const ListTokenForSale = ({ setAccount }) => {
         setIsListingCreated(true);
       } catch (error) {
         setIsListingCreated(false);
-        console.error("Listing failed to be created", error);
+        toast.error("Listing failed to be created, ", error);
       }
     } else {
       alert("Please connect wallet first.");
@@ -65,7 +65,7 @@ const ListTokenForSale = ({ setAccount }) => {
   };
 
   return (
-    <div id="list-tokens" className="container mx-auto p-6">
+    <div id="list-tokens" className="container mx-auto px-12 py-8 md:px-20">
       <ToastContainer />
       <div className="mb-8 p-6 bg-[#254336] text-white rounded-2xl shadow-lg">
         <div className="text-center text-2xl font-normal">
@@ -75,7 +75,7 @@ const ListTokenForSale = ({ setAccount }) => {
           </span>
         </div>
       </div>
-      <div className="bg-white p-8 rounded-2xl shadow-lg">
+      <div className="bg-white p-8 rounded-2xl shadow-lg border-2 border-[#A1EEBD]">
         <h2 className="text-2xl font-bold mb-6">List Tokens for Sale</h2>
         <form onSubmit={handleListing} className="space-y-6">
           <div>
@@ -88,7 +88,7 @@ const ListTokenForSale = ({ setAccount }) => {
               value={amountCTKN}
               onChange={(e) => [
                 setAmountCTKN(e.target.value),
-                setPriceETH(`${e.target.value * 0.0001}`),
+                setPriceETH(`${e.target.value * 0.00001}`),
               ]}
               required
               className="w-full p-2 border border-gray-300 rounded-lg"
@@ -96,7 +96,7 @@ const ListTokenForSale = ({ setAccount }) => {
           </div>
           <button
             type="submit"
-            className="w-full bg-[#79AC78] text-[#000] p-2 rounded-lg hover:bg-green-600"
+            className="w-full bg-[#79AC78] text-[#000] p-2 rounded-lg hover:bg-[#254336] hover:text-white transition duration-300 ease-in-out"
           >
             List for Sale
           </button>

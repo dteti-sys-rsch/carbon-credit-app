@@ -26,12 +26,10 @@ export const uploadFileToPinata = async (file, setIsUploading) => {
       },
     })
     .then(function (response) {
-      console.log("File uploaded to Pinata: ", response.data);
       setIsUploading(false);
       return response.data; // Return the full response data
     })
     .catch(function (error) {
-      console.error("Error uploading file to Pinata: ", error);
       setIsUploading(false);
       throw error;
     });

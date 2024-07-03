@@ -6,6 +6,8 @@ import {
   DisclosurePanel,
 } from "@headlessui/react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const navigation = [
   { name: "Home", href: "/", current: false },
@@ -23,6 +25,18 @@ const shortenText = (text, maxLength) => {
   if (text.length <= maxLength) return text;
   const half = Math.floor(maxLength / 2);
   return `${text.slice(0, half)}...${text.slice(-half)}`;
+};
+
+// Function to handle copy to clipboard
+const handleCopyToClipboard = (text) => {
+  navigator.clipboard.writeText(text).then(
+    () => {
+      toast.success("Account address copied to clipboard!");
+    },
+    (err) => {
+      toast.error("Failed to copy account address", err);
+    }
+  );
 };
 
 const Navbar = ({ account }) => {
@@ -67,8 +81,8 @@ const Navbar = ({ account }) => {
                           className={classNames(
                             item.current
                               ? "bg-gray-900 text-black"
-                              : "text-[#000] hover:bg-[#D8EFD3] hover:text-black",
-                            "rounded-md px-3 py-2 text-sm font-medium"
+                              : "text-[#000] hover:bg-[#D8EFD3] hover:text-black ",
+                            "rounded-md px-3 py-2 text-sm font-medium transition duration-300 ease-in-out"
                           )}
                           aria-current={item.current ? "page" : undefined}
                         >
@@ -79,8 +93,9 @@ const Navbar = ({ account }) => {
                     <p
                       key={account}
                       className={classNames(
-                        "text-[#000] hover:bg-[#D8EFD3] hover:text-black rounded-md px-3 py-2 text-sm font-medium"
+                        "text-[#000] hover:bg-[#D8EFD3] hover:text-black rounded-md px-3 py-2 text-sm font-medium transition duration-300 ease-in-out"
                       )}
+                      onClick={() => handleCopyToClipboard(account)}
                     >
                       {isLoading
                         ? "Loading Account..."
@@ -103,7 +118,7 @@ const Navbar = ({ account }) => {
                     item.current
                       ? "bg-gray-900 text-black"
                       : "text-[#000] hover:bg-[#D8EFD3] hover:text-black",
-                    "block rounded-md px-3 py-2 text-base font-medium"
+                    "block rounded-md px-3 py-2 text-base font-medium transition duration-300 ease-in-out"
                   )}
                   aria-current={item.current ? "page" : undefined}
                 >

@@ -38,7 +38,7 @@ const UpdateSecretKey = ({}) => {
         alert("Secret key updated successfully");
       }
     } catch (error) {
-      console.error("Updating secret key failed", error);
+      toast.error("Updating secret key failed, ", error);
       alert("Updating secret key failed");
     }
   };

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { connectToEthereum } from "../utils/Logic";
+import { ToastContainer, toast } from "react-toastify";
 
 const secretKey = process.env.REACT_APP_SECRET_KEY;
 
@@ -31,6 +32,7 @@ const MyToken = ({ setAccount }) => {
         const amountCTKN = ethers.utils.formatUnits(event.args.amountCTKN, 18);
         const priceETH = ethers.utils.formatEther(event.args.priceETH);
         const listingIndex = event.args.listingIndex.toNumber();
+        const transactionHash = event.transactionHash;
 
         if (!activeListingsMap[seller]) {
           activeListingsMap[seller] = [];
@@ -41,6 +43,7 @@ const MyToken = ({ setAccount }) => {
           priceETH,
           active: true,
           listingIndex,
+          transactionHash, // Store the transaction hash
         });
       });
 
@@ -81,6 +84,7 @@ const MyToken = ({ setAccount }) => {
               amountCTKN: listing.amountCTKN,
               priceETH: listing.priceETH,
               listingIndex: listing.listingIndex,
+              transactionHash: listing.transactionHash, // Include the transaction hash
               active: true,
             });
           }
@@ -95,7 +99,7 @@ const MyToken = ({ setAccount }) => {
       setListings(myListings);
       setIsLoadingAvailable(false);
     } catch (error) {
-      console.error("Failed to fetch listings", error);
+      toast.error("Failed to fetch listings, ", error);
     }
   };
 
@@ -114,12 +118,13 @@ const MyToken = ({ setAccount }) => {
         amountCTKN: ethers.utils.formatUnits(event.args.amountCTKN, 18),
         priceETH: ethers.utils.formatEther(event.args.priceETH),
         listingIndex: event.args.listingIndex.toNumber(),
+        transactionHash: event.transactionHash, // Store the transaction hash
       }));
 
       setPurchasedListings(purchasedListings);
       setIsLoading(false);
     } catch (error) {
-      console.error("Failed to fetch purchased listings", error);
+      toast.error("Failed to fetch purchased listings, ", error);
     }
   };
 
@@ -132,11 +137,12 @@ const MyToken = ({ setAccount }) => {
         buyer: event.args.buyer,
         amountCTKN: ethers.utils.formatUnits(event.args.amountCTKN, 18),
         priceETH: ethers.utils.formatEther(event.args.priceETH),
+        transactionHash: event.transactionHash, // Store the transaction hash
       }));
       setSoldListings(soldListings);
       setIsLoadingSold(false);
     } catch (error) {
-      console.error("Failed to fetch sold listings", error);
+      toast.error("Failed to fetch sold listings, ", error);
     }
   };
 
@@ -152,11 +158,11 @@ const MyToken = ({ setAccount }) => {
         fetchPurchasedListings(token, account);
         fetchSoldListings(token, account);
       } catch (error) {
-        console.error("Initialization failed", error);
+        toast.error(error.message);
       }
     };
     init();
-  }, []);
+  }, [fetchListings]);
 
   const handleDelete = async (listingIndex) => {
     if (token) {
@@ -166,7 +172,7 @@ const MyToken = ({ setAccount }) => {
         alert("Listing deleted successfully!");
         fetchListings(token);
       } catch (error) {
-        console.error("Deletion failed", error);
+        toast.error("Deletion failed, ", error);
         alert("Deletion failed: " + error.message);
       }
     } else {
@@ -175,27 +181,41 @@ const MyToken = ({ setAccount }) => {
   };
 
   return (
-    <div id="purchased-listings" className="container mx-auto p-6">
+    <div
+      id="purchased-listings"
+      className="container mx-auto px-12 py-8 md:px-20"
+    >
+      <ToastContainer />
       <h2 className="text-3xl font-bold text-center mb-6">My CTKN Listings</h2>
       <div className="space-y-4">
         {isLoadingAvailable ? (
           <div>Loading...</div>
         ) : listings.length > 0 ? (
           listings.map((listing, index) => (
-            <div key={index} className="bg-white p-6 rounded-lg shadow-lg">
-              <p className="text-lg font-semibold">Seller: {listing.seller}</p>
+            <div
+              key={index}
+              className="bg-white p-6 rounded-lg shadow-lg border-2 border-[#A91D3A]"
+            >
               <p>Amount: {listing.amountCTKN} CTKN</p>
               <p>Price: {listing.priceETH} ETH</p>
               <button
                 onClick={() => handleDelete(listing.listingIndex)}
-                className="bg-red-500 text-white px-4 py-2 mt-2 rounded-lg hover:bg-red-600"
+                className="bg-[#A91D3A] text-white px-4 py-2 mt-2 rounded-lg hover:bg-red-600 transition duration-300 ease-in-out"
               >
                 Delete
               </button>
+              <a
+                href={`https://sepolia.etherscan.io/tx/${listing.transactionHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-[#071952] text-[#fff] px-4 py-2 mt-2 rounded-lg hover:bg-[#088395] transition duration-300 ease-in-out ml-3"
+              >
+                View on Etherscan
+              </a>
             </div>
           ))
         ) : (
-          <div className="text-lg">No listings has been made.</div>
+          <div className="text-lg">No listings have been made.</div>
         )}
       </div>
       <h2 className="text-3xl font-bold text-center mb-6 pt-8">
@@ -206,10 +226,21 @@ const MyToken = ({ setAccount }) => {
           <div>Loading...</div>
         ) : purchasedListings.length > 0 ? (
           purchasedListings.map((listing, index) => (
-            <div key={index} className="bg-white p-6 rounded-lg shadow-lg">
+            <div
+              key={index}
+              className="bg-white p-6 rounded-lg shadow-lg border-2 border-[#5DEBD7]"
+            >
               <p className="text-lg font-semibold">Seller: {listing.seller}</p>
               <p>Amount: {listing.amountCTKN} CTKN</p>
-              <p>Price: {listing.priceETH} ETH</p>
+              <p className="mb-4">Price: {listing.priceETH} ETH</p>
+              <a
+                href={`https://sepolia.etherscan.io/tx/${listing.transactionHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-[#071952] text-[#fff] px-4 py-2 mt-2 rounded-lg hover:bg-[#088395] transition duration-300 ease-in-out"
+              >
+                View on Etherscan
+              </a>
             </div>
           ))
         ) : (
@@ -224,10 +255,21 @@ const MyToken = ({ setAccount }) => {
           <div>Loading...</div>
         ) : soldListings.length > 0 ? (
           soldListings.map((listing, index) => (
-            <div key={index} className="bg-white p-6 rounded-lg shadow-lg">
+            <div
+              key={index}
+              className="bg-white p-6 rounded-lg shadow-lg border-2 border-[#74E291]"
+            >
               <p className="text-lg font-semibold">Buyer: {listing.buyer}</p>
               <p>Amount: {listing.amountCTKN} CTKN</p>
-              <p>Price: {listing.priceETH} ETH</p>
+              <p className="mb-4">Price: {listing.priceETH} ETH</p>
+              <a
+                href={`https://sepolia.etherscan.io/tx/${listing.transactionHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-[#071952] text-[#fff] px-4 py-2 rounded-lg hover:bg-[#088395] transition duration-300 ease-in-out"
+              >
+                View on Etherscan
+              </a>
             </div>
           ))
         ) : (

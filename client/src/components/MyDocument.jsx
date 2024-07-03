@@ -85,21 +85,19 @@ const MyDocument = ({ recipient }) => {
         </Text>
         <Text style={styles.text}>Presented to</Text>
         <Text style={styles.highlight}>{recipient}</Text>
-        <Text style={styles.text}>for offsetting</Text>
+        <Text style={styles.text}></Text>
         <Text style={styles.highlight}>
           {carbonOffsetValue} MT of CO2 emissions
         </Text>
         <Text style={styles.text}>
-          By offsetting through Sustainable Travel International, you are
-          supporting verified carbon offset projects that reduce greenhouse gas
-          emissions, mitigate climate change impacts, and lead to healthier
-          environments and communities around the globe.
+          This document is valid for tokenization of CO2 emissions into token
+          CTKN.
         </Text>
         <View style={styles.signature}>
           <View>
-            <Text style={styles.signatureText}>Paloma Zapata</Text>
+            <Text style={styles.signatureText}>Mufidus Sani</Text>
             <Text style={styles.signatureText}>
-              CEO, Sustainable Travel International
+              Minister of Environment and Forestry
             </Text>
           </View>
         </View>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { connectToEthereum } from "../utils/Logic";
+import { ToastContainer, toast } from "react-toastify";
 
 const secretKey = process.env.REACT_APP_SECRET_KEY;
 
@@ -86,7 +87,7 @@ const Credits = ({ account, setAccount }) => {
       setListings(activeListings);
       setIsLoadingAvailable(false);
     } catch (error) {
-      console.error("Failed to fetch listings", error);
+      toast.error("Failed to fetch listings, ", error);
     }
   };
 
@@ -98,7 +99,7 @@ const Credits = ({ account, setAccount }) => {
         setToken(token);
         fetchListings(token, account);
       } catch (error) {
-        console.error("Initialization failed", error);
+        toast.error(error.message);
       }
     };
     init();
@@ -114,7 +115,7 @@ const Credits = ({ account, setAccount }) => {
         alert("Purchase successful!");
         fetchListings(token);
       } catch (error) {
-        console.error("Purchase failed", error);
+        toast.error("Purchase failed, ", error);
         alert("Purchase failed: " + error.message);
       }
     } else {
@@ -123,14 +124,21 @@ const Credits = ({ account, setAccount }) => {
   };
 
   return (
-    <div id="available-listings" className="container mx-auto p-6">
+    <div
+      id="available-listings"
+      className="container mx-auto px-12 py-8 md:px-20"
+    >
+      <ToastContainer />
       <h2 className="text-3xl font-bold text-center mb-6">Credits</h2>
       <ul className="space-y-4">
         {isLoadingAvailable ? (
           <div>Loading...</div>
         ) : listings.length > 0 ? (
           listings.map((listing, index) => (
-            <li key={index} className="bg-white p-6 rounded-lg shadow-lg">
+            <li
+              key={index}
+              className="bg-white p-6 rounded-lg shadow-lg border-2 border-[#5DEBD7]"
+            >
               <p className="text-lg font-semibold">Seller: {listing.seller}</p>
               <p>Amount: {listing.amountCTKN} CTKN</p>
               <p>Price: {listing.priceETH} ETH</p>
@@ -144,7 +152,7 @@ const Credits = ({ account, setAccount }) => {
                         listing.priceETH
                       )
                     }
-                    className="bg-green-500 text-white px-4 py-2 mt-2 rounded-lg hover:bg-green-600"
+                    className="bg-[#254336] text-white px-4 py-2 mt-2 rounded-lg hover:bg-green-600 transition duration-300 ease-in-out"
                   >
                     Buy
                   </button>

@@ -44,6 +44,12 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
 
     event ListingDeleted(address indexed seller, uint256 listingIndex);
 
+    event CertificateMinted(
+        address indexed account,
+        uint256 amount,
+        string ipfsHash
+    );
+
     modifier onlyWithSecretKey(string memory _key) {
         require(
             keccak256(abi.encodePacked(_key)) == secretKeyHash,
@@ -55,9 +61,12 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
     function mint(
         address to,
         uint256 amount,
-        string memory _key
+        string memory _key,
+        string memory ipfsHash
     ) public onlyWithSecretKey(_key) {
         _mint(to, amount);
+
+        emit CertificateMinted(to, amount, ipfsHash);
     }
 
     function listTokenForSale(
