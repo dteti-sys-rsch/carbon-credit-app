@@ -50,27 +50,31 @@ const Homepage = ({ account, setAccount }) => {
     <div className="container mx-auto px-12 py-8 md:px-20">
       <ToastContainer />
       <div className="text-left mb-6">
-        <div className="text-2xl">
+        <div className="text-lg">
           {account && `${getGreeting()}, `}
-          <span className="font-semibold">{account}</span>
+          {isLoading ? (
+            "Loading..."
+          ) : (
+            <span className="font-semibold">{account}</span>
+          )}
         </div>
       </div>
       <div className="flex flex-col space-y-6 justify-center">
         <div className="text-center items-center p-6 bg-[#254336] text-white rounded-2xl shadow-lg">
-          <div className="text-2xl">Carbon Token Balance</div>
+          <div className="text-xl">Carbon Token Balance</div>
           <div className="text-2xl mt-4 font-bold">
             {isLoading ? "Loading..." : `${ctknBalance} CTKN`}
           </div>
         </div>
         <div className="text-center items-center p-6 bg-[#E7F0DC] text-black rounded-2xl shadow-lg">
-          <div className="text-2xl">ETH Balance</div>
+          <div className="text-xl">ETH Balance</div>
           <div className="text-2xl mt-4 font-bold">
             {isLoading ? "Loading..." : `${ethBalance} ETH`}
           </div>
         </div>
       </div>
       <div className="mt-10 flex flex-col items-center">
-        <div className="text-xl text-center mb-3">
+        <div className="text-lg text-center mb-3">
           Have a Carbon Quota Certificates?
         </div>
         <Link to="/mint-token">

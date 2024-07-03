@@ -1,18 +1,20 @@
 import { useEffect, useState } from "react";
 import { connectToEthereum } from "../utils/Logic";
 import { ToastContainer, toast } from "react-toastify";
-import CryptoJS from "crypto-js";
+// import { keccak256 } from "web3-utils";
+import { keccak256, toUtf8Bytes } from "ethers/lib/utils";
 
 const secretKey = process.env.REACT_APP_SECRET_KEY;
-const getHashedKey = (key) => {
-  return CryptoJS.SHA256(key).toString(CryptoJS.enc.Hex);
-};
 
 const Credits = ({ account, setAccount }) => {
   const ethers = require("ethers");
   const [token, setToken] = useState(null);
   const [listings, setListings] = useState([]);
   const [isLoadingAvailable, setIsLoadingAvailable] = useState(true);
+
+  const getHashedKey = (key) => {
+    return keccak256(toUtf8Bytes(key));
+  };
 
   const fetchListings = async (token, account) => {
     try {
@@ -112,14 +114,11 @@ const Credits = ({ account, setAccount }) => {
   const handleBuy = async (seller, listingIndex, priceETH) => {
     if (token) {
       try {
-        const tx = await token.buyToken(
-          seller,
-          listingIndex,
-          getHashedKey(secretKey),
-          {
-            value: ethers.utils.parseEther(priceETH),
-          }
-        );
+        const hashedKey = getHashedKey(secretKey).toString();
+        console.log(hashedKey);
+        const tx = await token.buyToken(seller, listingIndex, hashedKey, {
+          value: ethers.utils.parseEther(priceETH),
+        });
         await tx.wait();
         toast.success("Purchase successful!");
         fetchListings(token);
@@ -128,7 +127,7 @@ const Credits = ({ account, setAccount }) => {
         toast.error("Purchase failed: " + error.message);
       }
     } else {
-      toast.warn("Please connect your wallet first");
+      toast.warning("Please connect your wallet first");
     }
   };
 

@@ -19,7 +19,7 @@ const MintToken = ({ account, setAccount }) => {
   const [isDuplicate, setIsDuplicate] = useState();
   const [mintingHistory, setMintingHistory] = useState([]);
   const [token, setToken] = useState(null);
-  const [isLoading, setIsLoading] = useState();
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchMintingHistory = async (token, account) => {
     const filter = token.filters.CertificateMinted();
@@ -38,7 +38,6 @@ const MintToken = ({ account, setAccount }) => {
         const { account, token } = await connectToEthereum();
         setAccount(account);
         setToken(token);
-        setIsLoading(true);
 
         const history = await fetchMintingHistory(token, account);
         setMintingHistory(history);
@@ -221,11 +220,9 @@ const MintToken = ({ account, setAccount }) => {
           <h2 className="text-xl font-bold mb-4 text-center">
             Minting History
           </h2>
-          {mintingHistory.length === 0 ? (
-            <p>No minting history found.</p>
-          ) : isLoading ? (
+          {isLoading ? (
             <p>Loading...</p>
-          ) : (
+          ) : mintingHistory.length > 0 ? (
             <ul>
               {mintingHistory.map((entry, index) => (
                 <li key={index} className="p-4 border-b border-gray-300">
@@ -250,6 +247,8 @@ const MintToken = ({ account, setAccount }) => {
                 </li>
               ))}
             </ul>
+          ) : (
+            <p>No minting history found.</p>
           )}
         </div>
       </div>

@@ -5,7 +5,7 @@ import { connectToEthereum } from "../utils/Logic";
 
 const secretKey = process.env.REACT_APP_SECRET_KEY;
 
-const ListTokenForSale = ({ setAccount }) => {
+const ListTokenForSale = ({ account, setAccount }) => {
   const ethers = require("ethers");
   const [ctknBalance, setCtknBalance] = useState(0);
   const [amountCTKN, setAmountCTKN] = useState("");
@@ -55,6 +55,8 @@ const ListTokenForSale = ({ setAccount }) => {
         );
         await tx.wait();
         setIsListingCreated(true);
+        const ctknBalance = await token.balanceOf(account);
+        setCtknBalance(ethers.utils.formatUnits(ctknBalance, 18));
       } catch (error) {
         setIsListingCreated(false);
         toast.error("Listing failed to be created, ", error);
