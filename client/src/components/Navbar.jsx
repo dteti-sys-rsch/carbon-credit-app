@@ -11,8 +11,8 @@ import "react-toastify/dist/ReactToastify.css";
 
 const navigation = [
   { name: "Home", href: "/", current: false },
-  { name: "Credits", href: "/credits", current: false },
-  { name: "Sale Token", href: "/sale-token", current: false },
+  { name: "Buy Token", href: "/buy-token", current: false },
+  { name: "Sell Token", href: "/sell-token", current: false },
   { name: "My Token", href: "/my-token", current: false },
 ];
 
@@ -34,7 +34,7 @@ const handleCopyToClipboard = (text) => {
       toast.success("Account address copied to clipboard!");
     },
     (err) => {
-      toast.error("Failed to copy account address", err);
+      toast.error("Failed to copy account address, " + err);
     }
   );
 };

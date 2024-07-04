@@ -1,17 +1,9 @@
-import React, { useEffect, useState } from "react";
-import CarbonCreditTokenABI from "../CarbonToken.json"; // Ensure this ABI is up-to-date
-import { uploadFileToPinata } from "../utils/PinataIPFS";
-import * as pdfjsLib from "pdfjs-dist/webpack";
+import React, { useState } from "react";
+import { connectToEthereum } from "../utils/Logic";
 import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css"; // Import Toastify CSS
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-
-const tokenAddress = process.env.REACT_APP_TOKEN_ADDRESS;
-const secretKey = process.env.REACT_APP_SECRET_KEY;
+import "react-toastify/dist/ReactToastify.css";
 
 const UpdateSecretKey = ({}) => {
-  const ethers = require("ethers");
   const [newSecretKey, setNewSecretKey] = useState("");
 
   const handleUpdateSecretKey = async (e) => {
@@ -24,13 +16,7 @@ const UpdateSecretKey = ({}) => {
     try {
       // Connect to the contract
       if (window.ethereum) {
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        const signer = provider.getSigner();
-        const token = new ethers.Contract(
-          tokenAddress,
-          CarbonCreditTokenABI.abi,
-          signer
-        );
+        const { token } = await connectToEthereum();
 
         // Update the secret key
         const tx = await token.updateSecretKey(newSecretKey);
@@ -38,7 +24,7 @@ const UpdateSecretKey = ({}) => {
         toast.success("Secret key updated successfully");
       }
     } catch (error) {
-      toast.error("Updating secret key failed, ", error);
+      toast.error("Updating secret key failed, " + error.message);
     }
   };
 

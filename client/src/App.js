@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Homepage from "./pages/Homepage";
-import ListTokenForSale from "./pages/ListTokenForSale";
-import Credits from "./pages/Credits";
+import SellToken from "./pages/SellToken";
+import BuyToken from "./pages/BuyToken";
 import MyToken from "./pages/MyToken";
 import MintToken from "./pages/MintToken";
 import RenderPDF from "./pages/RenderPDF";
@@ -25,20 +25,20 @@ function App() {
           }
         />
         <Route
-          path="/sale-token"
+          path="/sell-token"
           element={
             <>
               <Navbar account={account} />
-              <ListTokenForSale account={account} setAccount={setAccount} />
+              <SellToken account={account} setAccount={setAccount} />
             </>
           }
         />
         <Route
-          path="/credits"
+          path="/buy-token"
           element={
             <>
               <Navbar account={account} />
-              <Credits account={account} setAccount={setAccount} />
+              <BuyToken account={account} setAccount={setAccount} />
             </>
           }
         />

@@ -50,18 +50,15 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
         string ipfsHash
     );
 
-    modifier onlyWithSecretKey(string memory _key) {
-        require(
-            keccak256(abi.encodePacked(_key)) == secretKeyHash,
-            "Invalid secret key"
-        );
+    modifier onlyWithSecretKey(bytes32 _key) {
+        require(_key == secretKeyHash, "Invalid secret key");
         _;
     }
 
     function mint(
         address to,
         uint256 amount,
-        string memory _key,
+        bytes32 _key,
         string memory ipfsHash
     ) public onlyWithSecretKey(_key) {
         _mint(to, amount);
@@ -72,7 +69,7 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
     function listTokenForSale(
         uint256 amountCTKN,
         uint256 priceETH,
-        string memory _key
+        bytes32 _key
     ) external onlyWithSecretKey(_key) {
         require(
             balanceOf(msg.sender) >= amountCTKN,
@@ -97,7 +94,7 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
     function buyToken(
         address seller,
         uint256 listingIndex,
-        string memory _key
+        bytes32 _key
     ) external payable onlyWithSecretKey(_key) {
         Listing storage listing = listings[seller][listingIndex];
         require(listing.active, "Listing is not active");
@@ -121,7 +118,7 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
 
     function deleteListing(
         uint256 listingIndex,
-        string memory _key
+        bytes32 _key
     ) external onlyWithSecretKey(_key) {
         require(
             listingIndex < listings[msg.sender].length,

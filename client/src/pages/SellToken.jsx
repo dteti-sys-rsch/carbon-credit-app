@@ -2,10 +2,12 @@ import React, { useEffect, useState } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { connectToEthereum } from "../utils/Logic";
+import { keccak256, toUtf8Bytes } from "ethers/lib/utils";
 
 const secretKey = process.env.REACT_APP_SECRET_KEY;
+const hashedKey = keccak256(toUtf8Bytes(secretKey));
 
-const ListTokenForSale = ({ account, setAccount }) => {
+const SellToken = ({ account, setAccount }) => {
   const ethers = require("ethers");
   const [ctknBalance, setCtknBalance] = useState(0);
   const [amountCTKN, setAmountCTKN] = useState("");
@@ -30,15 +32,11 @@ const ListTokenForSale = ({ account, setAccount }) => {
       }
     };
     init();
-  }, []);
+  }, [ctknBalance]);
 
   useEffect(() => {
     if (isListingCreated === true) {
       toast.success("Listing successfully created!", {
-        autoClose: true,
-      });
-    } else if (isListingCreated === false) {
-      toast.error("Listing error!", {
         autoClose: true,
       });
     }
@@ -46,20 +44,25 @@ const ListTokenForSale = ({ account, setAccount }) => {
 
   const handleListing = async (e) => {
     e.preventDefault();
+    if (parseFloat(amountCTKN) <= 0) {
+      toast.warn("Amount must be greater than 0.");
+      return;
+    }
     if (token) {
       try {
         const tx = await token.listTokenForSale(
           ethers.utils.parseUnits(amountCTKN, 18),
           ethers.utils.parseEther(priceETH),
-          secretKey
+          hashedKey
         );
         await tx.wait();
         setIsListingCreated(true);
         const ctknBalance = await token.balanceOf(account);
         setCtknBalance(ethers.utils.formatUnits(ctknBalance, 18));
+        setAmountCTKN("");
       } catch (error) {
         setIsListingCreated(false);
-        toast.error("Listing failed to be created, ", error);
+        toast.error("Listing failed to be created, " + error.message);
       }
     } else {
       toast.warn("Please connect wallet first.");
@@ -78,29 +81,38 @@ const ListTokenForSale = ({ account, setAccount }) => {
         </div>
       </div>
       <div className="bg-white p-8 rounded-2xl shadow-lg border-2 border-[#A1EEBD]">
-        <h2 className="text-2xl font-bold mb-6">List Tokens for Sale</h2>
+        <h2 className="text-2xl font-bold mb-6">Sell Carbon Token </h2>
         <form onSubmit={handleListing} className="space-y-6">
           <div>
             <label className="block text-lg font-medium mb-2">
               Amount to List:
             </label>
             <input
-              placeholder="Enter amount of CTKN to list"
+              placeholder="Enter amount of CTKN"
               type="number"
               value={amountCTKN}
-              onChange={(e) => [
-                setAmountCTKN(e.target.value),
-                setPriceETH(`${e.target.value * 0.00001}`),
-              ]}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (parseFloat(value) > 0) {
+                  setAmountCTKN(value);
+                  setPriceETH(`${value * 0.00001}`);
+                } else {
+                  setAmountCTKN("");
+                  setPriceETH("");
+                  toast.warn("Amount must be greater than 0.");
+                }
+              }}
               required
               className="w-full p-2 border border-gray-300 rounded-lg"
+              min="0.000000000000000001" // Sets the minimum value for the input
+              step="any" // Allows for decimal inputs
             />
           </div>
           <button
             type="submit"
             className="w-full bg-[#79AC78] text-[#000] p-2 rounded-lg hover:bg-[#254336] hover:text-white transition duration-300 ease-in-out"
           >
-            List for Sale
+            List for Sell
           </button>
         </form>
       </div>
@@ -108,4 +120,4 @@ const ListTokenForSale = ({ account, setAccount }) => {
   );
 };
 
-export default ListTokenForSale;
+export default SellToken;

@@ -1,20 +1,16 @@
 import { useEffect, useState } from "react";
 import { connectToEthereum } from "../utils/Logic";
 import { ToastContainer, toast } from "react-toastify";
-// import { keccak256 } from "web3-utils";
 import { keccak256, toUtf8Bytes } from "ethers/lib/utils";
 
 const secretKey = process.env.REACT_APP_SECRET_KEY;
+const hashedKey = keccak256(toUtf8Bytes(secretKey));
 
-const Credits = ({ account, setAccount }) => {
+const BuyToken = ({ account, setAccount }) => {
   const ethers = require("ethers");
   const [token, setToken] = useState(null);
   const [listings, setListings] = useState([]);
   const [isLoadingAvailable, setIsLoadingAvailable] = useState(true);
-
-  const getHashedKey = (key) => {
-    return keccak256(toUtf8Bytes(key));
-  };
 
   const fetchListings = async (token, account) => {
     try {
@@ -93,7 +89,7 @@ const Credits = ({ account, setAccount }) => {
       setListings(activeListings);
       setIsLoadingAvailable(false);
     } catch (error) {
-      toast.error("Failed to fetch listings, ", error);
+      toast.error("Failed to fetch listings, " + error.message);
     }
   };
 
@@ -114,8 +110,6 @@ const Credits = ({ account, setAccount }) => {
   const handleBuy = async (seller, listingIndex, priceETH) => {
     if (token) {
       try {
-        const hashedKey = getHashedKey(secretKey).toString();
-        console.log(hashedKey);
         const tx = await token.buyToken(seller, listingIndex, hashedKey, {
           value: ethers.utils.parseEther(priceETH),
         });
@@ -123,7 +117,6 @@ const Credits = ({ account, setAccount }) => {
         toast.success("Purchase successful!");
         fetchListings(token);
       } catch (error) {
-        toast.error("Purchase failed, ", error);
         toast.error("Purchase failed: " + error.message);
       }
     } else {
@@ -137,7 +130,9 @@ const Credits = ({ account, setAccount }) => {
       className="container mx-auto px-12 py-8 md:px-20"
     >
       <ToastContainer />
-      <h2 className="text-3xl font-bold text-center mb-6">Credits</h2>
+      <h2 className="text-3xl font-bold text-center mb-6">
+        List of Carbon Token
+      </h2>
       <ul className="space-y-4">
         {isLoadingAvailable ? (
           <div>Loading...</div>
@@ -169,11 +164,11 @@ const Credits = ({ account, setAccount }) => {
             </li>
           ))
         ) : (
-          <div className="text-lg">No credits of CTKN available right now.</div>
+          <div className="text-lg">No list of CTKN available right now.</div>
         )}
       </ul>
     </div>
   );
 };
 
-export default Credits;
+export default BuyToken;

@@ -3,10 +3,13 @@ import { uploadFileToPinata, deleteFileFromPinata } from "../utils/PinataIPFS";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { connectToEthereum } from "../utils/Logic";
+import { keccak256, toUtf8Bytes } from "ethers/lib/utils";
+
 import * as pdfjsLib from "pdfjs-dist/webpack";
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 const secretKey = process.env.REACT_APP_SECRET_KEY;
+const hashedKey = keccak256(toUtf8Bytes(secretKey));
 
 const MintToken = ({ account, setAccount }) => {
   const ethers = require("ethers");
@@ -130,7 +133,7 @@ const MintToken = ({ account, setAccount }) => {
         setFileInvalid(true);
       }
       reader.onerror = (error) => {
-        toast.error("Error reading PDF file, ", error);
+        toast.error("Error reading PDF file, " + error.message);
       };
     };
   };
@@ -159,7 +162,7 @@ const MintToken = ({ account, setAccount }) => {
       const tx = await token.mint(
         account,
         ethers.utils.parseUnits(mintAmount, 18),
-        secretKey,
+        hashedKey,
         ipfsHash
       );
       await tx.wait();

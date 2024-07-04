@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { connectToEthereum } from "../utils/Logic";
 import { ToastContainer, toast } from "react-toastify";
+import { keccak256, toUtf8Bytes } from "ethers/lib/utils";
 
 const secretKey = process.env.REACT_APP_SECRET_KEY;
+const hashedKey = keccak256(toUtf8Bytes(secretKey));
 
 const MyToken = ({ setAccount }) => {
   const ethers = require("ethers");
@@ -99,7 +101,7 @@ const MyToken = ({ setAccount }) => {
       setListings(myListings);
       setIsLoadingAvailable(false);
     } catch (error) {
-      toast.error("Failed to fetch listings, ", error);
+      toast.error("Failed to fetch listings, " + error.message);
     }
   };
 
@@ -124,7 +126,7 @@ const MyToken = ({ setAccount }) => {
       setPurchasedListings(purchasedListings);
       setIsLoading(false);
     } catch (error) {
-      toast.error("Failed to fetch purchased listings, ", error);
+      toast.error("Failed to fetch purchased listings, " + error.message);
     }
   };
 
@@ -142,7 +144,7 @@ const MyToken = ({ setAccount }) => {
       setSoldListings(soldListings);
       setIsLoadingSold(false);
     } catch (error) {
-      toast.error("Failed to fetch sold listings, ", error);
+      toast.error("Failed to fetch sold listings, " + error.message);
     }
   };
 
@@ -167,12 +169,12 @@ const MyToken = ({ setAccount }) => {
   const handleDelete = async (listingIndex) => {
     if (token) {
       try {
-        const tx = await token.deleteListing(listingIndex, secretKey);
+        const tx = await token.deleteListing(listingIndex, hashedKey);
         await tx.wait();
         toast.success("Listing deleted successfully!");
         fetchListings(token);
       } catch (error) {
-        toast.error("Deletion failed, ", error.message);
+        toast.error("Deletion failed, " + error.message);
       }
     } else {
       toast.warn("Please connect your wallet first");
@@ -185,7 +187,9 @@ const MyToken = ({ setAccount }) => {
       className="container mx-auto px-12 py-8 md:px-20"
     >
       <ToastContainer />
-      <h2 className="text-3xl font-bold text-center mb-6">My CTKN Listings</h2>
+      <h2 className="text-3xl font-bold text-center mb-6">
+        My Carbon Token Listings
+      </h2>
       <div className="space-y-4">
         {isLoadingAvailable ? (
           <div>Loading...</div>
@@ -214,11 +218,11 @@ const MyToken = ({ setAccount }) => {
             </div>
           ))
         ) : (
-          <div className="text-lg">No listings have been made.</div>
+          <div className="text-lg">No listings has been made.</div>
         )}
       </div>
       <h2 className="text-3xl font-bold text-center mb-6 pt-8">
-        Purchased Listings
+        Purchased Carbon Token
       </h2>
       <div className="space-y-4">
         {isLoading ? (
@@ -243,11 +247,11 @@ const MyToken = ({ setAccount }) => {
             </div>
           ))
         ) : (
-          <div className="text-lg">No listings been purchased.</div>
+          <div className="text-lg">No listings has been purchased.</div>
         )}
       </div>
       <h2 className="text-3xl font-bold text-center mb-6 pt-8">
-        Sold Listings
+        Carbon Token Sold
       </h2>
       <div className="space-y-4">
         {isLoadingSold ? (
@@ -272,7 +276,7 @@ const MyToken = ({ setAccount }) => {
             </div>
           ))
         ) : (
-          <div className="text-lg">No listings currently sold.</div>
+          <div className="text-lg">No listings has been sold.</div>
         )}
       </div>
     </div>
