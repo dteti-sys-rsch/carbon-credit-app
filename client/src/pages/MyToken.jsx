@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
-import { connectToEthereum } from "../utils/Logic";
 import { ToastContainer, toast } from "react-toastify";
-import { keccak256, toUtf8Bytes } from "ethers/lib/utils";
-
-const secretKey = process.env.REACT_APP_SECRET_KEY;
-const hashedKey = keccak256(toUtf8Bytes(secretKey));
+import { connectToEthereum, generateSignature } from "../utils/Logic";
 
 const MyToken = ({ setAccount }) => {
   const ethers = require("ethers");
@@ -101,7 +97,12 @@ const MyToken = ({ setAccount }) => {
       setListings(myListings);
       setIsLoadingAvailable(false);
     } catch (error) {
-      toast.error("Failed to fetch listings, " + error.message);
+      toast.error(
+        <div>
+          Failed to fetch listings
+          <br /> {error.message}
+        </div>
+      );
     }
   };
 
@@ -126,7 +127,11 @@ const MyToken = ({ setAccount }) => {
       setPurchasedListings(purchasedListings);
       setIsLoading(false);
     } catch (error) {
-      toast.error("Failed to fetch purchased listings, " + error.message);
+      toast.error(
+        <div>
+          Failed to fetch purchased listings <br /> {error.message}
+        </div>
+      );
     }
   };
 
@@ -144,7 +149,11 @@ const MyToken = ({ setAccount }) => {
       setSoldListings(soldListings);
       setIsLoadingSold(false);
     } catch (error) {
-      toast.error("Failed to fetch sold listings, " + error.message);
+      toast.error(
+        <div>
+          Failed to fetch sold listings <br /> {error.message}
+        </div>
+      );
     }
   };
 
@@ -164,17 +173,25 @@ const MyToken = ({ setAccount }) => {
       }
     };
     init();
-  }, [fetchListings]);
+  });
 
   const handleDelete = async (listingIndex) => {
     if (token) {
       try {
-        const tx = await token.deleteListing(listingIndex, hashedKey);
+        const { account, provider } = await connectToEthereum();
+
+        const signature = await generateSignature(account, provider);
+        const tx = await token.deleteListing(listingIndex, signature);
         await tx.wait();
         toast.success("Listing deleted successfully!");
         fetchListings(token);
       } catch (error) {
-        toast.error("Deletion failed, " + error.message);
+        toast.error(
+          <div>
+            Deletion failed <br />
+            {error.message}
+          </div>
+        );
       }
     } else {
       toast.warn("Please connect your wallet first");

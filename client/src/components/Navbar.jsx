@@ -34,7 +34,13 @@ const handleCopyToClipboard = (text) => {
       toast.success("Account address copied to clipboard!");
     },
     (err) => {
-      toast.error("Failed to copy account address, " + err);
+      toast.error(
+        <div>
+          Failed to Copy Account Address
+          <br />
+          {err}
+        </div>
+      );
     }
   );
 };
@@ -47,7 +53,7 @@ const Navbar = ({ account }) => {
     } else {
       setIsLoading(false);
     }
-  });
+  }, [account]);
   return (
     <Disclosure as="nav" className="bg-[#AFD198]">
       {({ open }) => (

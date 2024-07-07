@@ -44,7 +44,7 @@ const Homepage = ({ account, setAccount }) => {
       }
     };
     init();
-  }, []);
+  });
 
   return (
     <div className="container mx-auto px-12 py-8 md:px-20">

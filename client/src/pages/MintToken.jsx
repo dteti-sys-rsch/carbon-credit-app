@@ -2,14 +2,10 @@ import React, { useEffect, useState } from "react";
 import { uploadFileToPinata, deleteFileFromPinata } from "../utils/PinataIPFS";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { connectToEthereum } from "../utils/Logic";
-import { keccak256, toUtf8Bytes } from "ethers/lib/utils";
+import { connectToEthereum, generateSignature } from "../utils/Logic";
 
 import * as pdfjsLib from "pdfjs-dist/webpack";
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-
-const secretKey = process.env.REACT_APP_SECRET_KEY;
-const hashedKey = keccak256(toUtf8Bytes(secretKey));
 
 const MintToken = ({ account, setAccount }) => {
   const ethers = require("ethers");
@@ -17,11 +13,10 @@ const MintToken = ({ account, setAccount }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [files, setFiles] = useState([null]);
-  const [isTokensMinted, setTokensMinted] = useState();
+  const [isTokensMinted, setTokensMinted] = useState(false);
   const [isFileInvalid, setFileInvalid] = useState(false);
-  const [isDuplicate, setIsDuplicate] = useState();
+  const [isDuplicate, setIsDuplicate] = useState(false);
   const [mintingHistory, setMintingHistory] = useState([]);
-  const [token, setToken] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchMintingHistory = async (token, account) => {
@@ -40,7 +35,6 @@ const MintToken = ({ account, setAccount }) => {
       try {
         const { account, token } = await connectToEthereum();
         setAccount(account);
-        setToken(token);
 
         const history = await fetchMintingHistory(token, account);
         setMintingHistory(history);
@@ -50,61 +44,86 @@ const MintToken = ({ account, setAccount }) => {
       }
     };
     init();
-  }, [fetchMintingHistory]);
+  });
 
   useEffect(() => {
     if (isUploading) {
       toast.info("Checking Certificate...", {
         autoClose: false,
+        toastId: "uploadingToast",
       });
     } else {
-      toast.dismiss();
+      toast.dismiss("uploadingToast");
     }
   }, [isUploading]);
 
   useEffect(() => {
     if (isDeleting) {
-      toast.error("Mint Token CTKN Failed, Reverting Certificate...", {
-        autoClose: false,
-      });
+      toast.error(
+        <div>
+          Mint Token CTKN Failed
+          <br />
+          Reverting Certificate...
+        </div>,
+        {
+          autoClose: false,
+          toastId: "deletingToast",
+        }
+      );
     } else {
-      toast.dismiss();
+      toast.dismiss("deletingToast");
     }
   }, [isDeleting]);
 
   useEffect(() => {
-    if (isTokensMinted === true) {
+    if (isTokensMinted) {
       toast.success("Token CTKN Minted Successfully!", {
         autoClose: true,
+        toastId: "mintedToast",
       });
+    } else {
+      toast.dismiss("mintedToast");
     }
   }, [isTokensMinted]);
 
   useEffect(() => {
     if (isFileInvalid) {
-      toast.error("Certificate cannot be verified. Document invalid.", {
-        autoClose: true,
-      });
+      toast.error(
+        <div>
+          Certificate cannot be verified
+          <br />
+          Document invalid.
+        </div>,
+        {
+          autoClose: true,
+          toastId: "invalidFileToast",
+        }
+      );
     } else {
-      toast.dismiss();
+      toast.dismiss("invalidFileToast");
     }
   }, [isFileInvalid]);
 
   useEffect(() => {
     if (isDuplicate) {
       toast.error(
-        "Certificate cannot be verified. Certificate already minted.",
+        <div>
+          Certificate cannot be verified
+          <br />
+          Certificate already minted.
+        </div>,
         {
           autoClose: true,
+          toastId: "duplicateToast",
         }
       );
     } else {
-      toast.dismiss();
+      toast.dismiss("duplicateToast");
     }
   }, [isDuplicate]);
 
   const extractMintAmountFromPdf = async (file) => {
-    if (file === undefined) return;
+    if (!file) return;
 
     setMintAmount("");
     setFileInvalid(false);
@@ -117,40 +136,49 @@ const MintToken = ({ account, setAccount }) => {
       const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
       let text = "";
 
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
+      const processPageText = async (page) => {
         const textContent = await page.getTextContent();
         textContent.items.forEach((item) => {
           text += item.str + " ";
         });
+      };
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        await processPageText(page);
       }
 
-      // Extracting the carbon offset value from the PDF text
       const match = text.match(/(\d+(\.\d+)?)\s*MT\s*of\s*CO2\s*emissions/);
       if (match) {
         setMintAmount(`${match[1] * 1000}`);
       } else {
         setFileInvalid(true);
       }
-      reader.onerror = (error) => {
-        toast.error("Error reading PDF file, " + error.message);
-      };
+    };
+
+    reader.onerror = (error) => {
+      toast.error(
+        <div>
+          Error reading PDF file <br /> {error.message}
+        </div>
+      );
     };
   };
 
   const handleMint = async (e) => {
     e.preventDefault();
     if (!mintAmount) {
-      toast.error("Please provide a certificate in PDF format that valid.");
+      toast.error("Please provide a certificate in PDF format that is valid.");
       return;
     } else if (!account) {
       toast.error("Account not connected.");
+      return;
     }
 
     let ipfsHash = "";
 
     try {
-      const { token } = await connectToEthereum();
+      const { token, provider } = await connectToEthereum();
       const result = await uploadFileToPinata(files, setIsUploading);
       ipfsHash = result.IpfsHash;
       if (result.isDuplicate) {
@@ -158,21 +186,25 @@ const MintToken = ({ account, setAccount }) => {
         return;
       }
 
-      // Mint the tokens
+      const signature = await generateSignature(account, provider);
       const tx = await token.mint(
         account,
         ethers.utils.parseUnits(mintAmount, 18),
-        hashedKey,
-        ipfsHash
+        ipfsHash,
+        signature
       );
       await tx.wait();
       setTokensMinted(true);
     } catch (error) {
       setTokensMinted(false);
       try {
-        await deleteFileFromPinata(ipfsHash, setIsDeleting); // Delete the uploaded file from Pinata when transaction cancel/rejected
+        await deleteFileFromPinata(ipfsHash, setIsDeleting);
       } catch (deleteError) {
-        toast.error("Failed to delete file from Pinata, ", deleteError);
+        toast.error(
+          <div>
+            Failed to delete file from Pinata <br /> {deleteError}
+          </div>
+        );
       }
     }
   };
@@ -189,7 +221,7 @@ const MintToken = ({ account, setAccount }) => {
             onSubmit={handleMint}
             className="flex flex-col items-center space-y-4 w-full"
           >
-            <label className="self-start text-left" for="certificate">
+            <label className="self-start text-left" htmlFor="certificate">
               Choose Certificate File (PDF)
             </label>
             <input
@@ -199,7 +231,7 @@ const MintToken = ({ account, setAccount }) => {
               onChange={(e) => extractMintAmountFromPdf(e.target.files[0])}
               className="p-2 border border-gray-400 rounded w-full"
             />
-            <label className="self-start text-left" for="amountCTKN">
+            <label className="self-start text-left" htmlFor="amountCTKN">
               Amount CTKN
             </label>
             <input

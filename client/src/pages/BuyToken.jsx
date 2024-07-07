@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
-import { connectToEthereum } from "../utils/Logic";
+import { connectToEthereum, generateSignature } from "../utils/Logic";
 import { ToastContainer, toast } from "react-toastify";
-import { keccak256, toUtf8Bytes } from "ethers/lib/utils";
-
-const secretKey = process.env.REACT_APP_SECRET_KEY;
-const hashedKey = keccak256(toUtf8Bytes(secretKey));
 
 const BuyToken = ({ account, setAccount }) => {
   const ethers = require("ethers");
@@ -89,7 +85,13 @@ const BuyToken = ({ account, setAccount }) => {
       setListings(activeListings);
       setIsLoadingAvailable(false);
     } catch (error) {
-      toast.error("Failed to fetch listings, " + error.message);
+      toast.error(
+        <div>
+          Failed to Fetch Listings
+          <br />
+          {error.message}
+        </div>
+      );
     }
   };
 
@@ -105,19 +107,27 @@ const BuyToken = ({ account, setAccount }) => {
       }
     };
     init();
-  }, []);
+  });
 
   const handleBuy = async (seller, listingIndex, priceETH) => {
     if (token) {
       try {
-        const tx = await token.buyToken(seller, listingIndex, hashedKey, {
+        const { account, provider } = await connectToEthereum();
+        const signature = await generateSignature(account, provider);
+        const tx = await token.buyToken(seller, listingIndex, signature, {
           value: ethers.utils.parseEther(priceETH),
         });
         await tx.wait();
         toast.success("Purchase successful!");
         fetchListings(token);
       } catch (error) {
-        toast.error("Purchase failed: " + error.message);
+        toast.error(
+          <div>
+            Purchase Carbon Token Failed
+            <br />
+            {error.reason}
+          </div>
+        );
       }
     } else {
       toast.warning("Please connect your wallet first");

@@ -6,10 +6,9 @@ async function main() {
 
   // Define the constructor arguments
   const initialOwner = deployer.address;
-  const secretKey = "skripsi_mufidus_sani";
 
   // Deploy the contract with the constructor arguments
-  const token = await CarbonToken.deploy(initialOwner, secretKey);
+  const token = await CarbonToken.deploy(initialOwner);
 
   console.log("CarbonToken deployed to:", await token.getAddress());
 }

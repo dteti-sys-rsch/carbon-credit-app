@@ -1,11 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { connectToEthereum } from "../utils/Logic";
-import { keccak256, toUtf8Bytes } from "ethers/lib/utils";
-
-const secretKey = process.env.REACT_APP_SECRET_KEY;
-const hashedKey = keccak256(toUtf8Bytes(secretKey));
+import { connectToEthereum, generateSignature } from "../utils/Logic";
 
 const SellToken = ({ account, setAccount }) => {
   const ethers = require("ethers");
@@ -32,7 +28,7 @@ const SellToken = ({ account, setAccount }) => {
       }
     };
     init();
-  }, [ctknBalance]);
+  });
 
   useEffect(() => {
     if (isListingCreated === true) {
@@ -50,10 +46,13 @@ const SellToken = ({ account, setAccount }) => {
     }
     if (token) {
       try {
+        const { account, provider } = await connectToEthereum();
+        const signature = await generateSignature(account, provider);
+
         const tx = await token.listTokenForSale(
           ethers.utils.parseUnits(amountCTKN, 18),
           ethers.utils.parseEther(priceETH),
-          hashedKey
+          signature
         );
         await tx.wait();
         setIsListingCreated(true);
@@ -62,7 +61,13 @@ const SellToken = ({ account, setAccount }) => {
         setAmountCTKN("");
       } catch (error) {
         setIsListingCreated(false);
-        toast.error("Listing failed to be created, " + error.message);
+        toast.error(
+          <div>
+            Listing failed to be created
+            <br />
+            {error.reason}
+          </div>
+        );
       }
     } else {
       toast.warn("Please connect wallet first.");
@@ -104,8 +109,7 @@ const SellToken = ({ account, setAccount }) => {
               }}
               required
               className="w-full p-2 border border-gray-300 rounded-lg"
-              min="0.000000000000000001" // Sets the minimum value for the input
-              step="any" // Allows for decimal inputs
+              step="any"
             />
           </div>
           <button

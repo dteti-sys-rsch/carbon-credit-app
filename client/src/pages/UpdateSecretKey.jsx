@@ -3,7 +3,7 @@ import { connectToEthereum } from "../utils/Logic";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const UpdateSecretKey = ({}) => {
+const UpdateSecretKey = () => {
   const [newSecretKey, setNewSecretKey] = useState("");
 
   const handleUpdateSecretKey = async (e) => {
@@ -24,12 +24,18 @@ const UpdateSecretKey = ({}) => {
         toast.success("Secret key updated successfully");
       }
     } catch (error) {
-      toast.error("Updating secret key failed, " + error.message);
+      toast.error(
+        <div>
+          Updating secret key failed <br />
+          {error.message}
+        </div>
+      );
     }
   };
 
   return (
     <div className="flex flex-col items-center p-10 bg-red-500 text-white rounded-2xl shadow-lg w-full max-w-md mt-10">
+      <ToastContainer />
       <div className="text-xl font-bold mb-4 text-center">
         Update Secret Key
       </div>
