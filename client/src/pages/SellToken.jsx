@@ -100,7 +100,7 @@ const SellToken = ({ account, setAccount }) => {
                 const value = e.target.value;
                 if (parseFloat(value) > 0) {
                   setAmountCTKN(value);
-                  setPriceETH(`${value * 0.00001}`);
+                  setPriceETH(`${(value * 0.00001).toFixed(8)}`);
                 } else {
                   setAmountCTKN("");
                   setPriceETH("");

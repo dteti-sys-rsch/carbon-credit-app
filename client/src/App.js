@@ -7,7 +7,6 @@ import BuyToken from "./pages/BuyToken";
 import MyToken from "./pages/MyToken";
 import MintToken from "./pages/MintToken";
 import RenderPDF from "./pages/RenderPDF";
-import UpdateSecretKey from "./pages/UpdateSecretKey";
 
 function App() {
   const [account, setAccount] = useState("");
@@ -66,15 +65,6 @@ function App() {
             <>
               <Navbar account={account} />
               <RenderPDF />
-            </>
-          }
-        />
-        <Route
-          path="/update-secret-key"
-          element={
-            <>
-              <Navbar account={account} />
-              <UpdateSecretKey />
             </>
           }
         />
