@@ -7,6 +7,7 @@ import BuyToken from "./pages/BuyToken";
 import MyToken from "./pages/MyToken";
 import MintToken from "./pages/MintToken";
 import RenderPDF from "./pages/RenderPDF";
+import UpdateContractMessage from "./pages/UpdateContractMessage";
 
 function App() {
   const [account, setAccount] = useState("");
@@ -65,6 +66,15 @@ function App() {
             <>
               <Navbar account={account} />
               <RenderPDF />
+            </>
+          }
+        />
+        <Route
+          path="/update-message"
+          element={
+            <>
+              <Navbar account={account} />
+              <UpdateContractMessage setAccount={setAccount} />
             </>
           }
         />

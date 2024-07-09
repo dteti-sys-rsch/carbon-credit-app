@@ -12,8 +12,7 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
 
-    bytes32 private constant AUTHORIZED_MESSAGE =
-        keccak256("skripsi_mufidus_sani");
+    bytes32 private authorizedMessage;
 
     constructor(
         address initialOwner
@@ -21,7 +20,9 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
         ERC20("CarbonToken", "CTKN")
         Ownable(initialOwner)
         ERC20Permit("CarbonToken")
-    {}
+    {
+        authorizedMessage = keccak256("skripsi_mufidus_sani");
+    }
 
     struct Listing {
         uint256 amountCTKN;
@@ -51,8 +52,14 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
         string ipfsHash
     );
 
+    function updateAuthorizedMessage(
+        string memory newMessage
+    ) external onlyOwner {
+        authorizedMessage = keccak256(bytes(newMessage));
+    }
+
     modifier onlyWithSignature(bytes memory signature) {
-        bytes32 messageHash = AUTHORIZED_MESSAGE.toEthSignedMessageHash();
+        bytes32 messageHash = authorizedMessage.toEthSignedMessageHash();
         address signer = messageHash.recover(signature);
         require(signer == msg.sender, "Invalid signature");
         _;
