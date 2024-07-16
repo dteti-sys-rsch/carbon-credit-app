@@ -1,3 +1,7 @@
+require("dotenv").config();
+
+const { SECRET_MESSAGE } = process.env;
+
 async function main() {
   const [deployer] = await ethers.getSigners();
   console.log("Deploying contracts with the account:", deployer.address);
@@ -6,9 +10,10 @@ async function main() {
 
   // Define the constructor arguments
   const initialOwner = deployer.address;
+  const authorizedMessage = SECRET_MESSAGE;
 
   // Deploy the contract with the constructor arguments
-  const token = await CarbonToken.deploy(initialOwner);
+  const token = await CarbonToken.deploy(initialOwner, authorizedMessage);
 
   console.log("CarbonToken deployed to:", await token.getAddress());
 }

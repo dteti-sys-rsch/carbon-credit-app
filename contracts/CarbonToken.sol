@@ -12,16 +12,15 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
 
-    bytes32 private authorizedMessage;
-
     constructor(
-        address initialOwner
+        address initialOwner,
+        string memory _authorizedMessage
     )
         ERC20("CarbonToken", "CTKN")
         Ownable(initialOwner)
         ERC20Permit("CarbonToken")
     {
-        authorizedMessage = keccak256("skripsi_mufidus_sani");
+        authorizedMessage = keccak256(abi.encodePacked(_authorizedMessage));
     }
 
     struct Listing {
@@ -31,6 +30,7 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
     }
 
     mapping(address => Listing[]) public listings;
+    bytes32 private authorizedMessage;
 
     event TokenListed(
         address indexed seller,
@@ -51,12 +51,6 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
         uint256 amount,
         string ipfsHash
     );
-
-    function updateAuthorizedMessage(
-        string memory newMessage
-    ) external onlyOwner {
-        authorizedMessage = keccak256(bytes(newMessage));
-    }
 
     modifier onlyWithSignature(bytes memory signature) {
         bytes32 messageHash = authorizedMessage.toEthSignedMessageHash();
@@ -129,6 +123,12 @@ contract CarbonToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
         _transfer(address(this), msg.sender, listing.amountCTKN);
         listing.active = false;
         emit ListingDeleted(msg.sender, listingIndex);
+    }
+
+    function updateAuthorizedMessage(
+        string memory newMessage
+    ) external onlyOwner {
+        authorizedMessage = keccak256(bytes(newMessage));
     }
 
     receive() external payable {}

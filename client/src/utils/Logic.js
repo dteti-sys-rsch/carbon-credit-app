@@ -33,7 +33,7 @@ export const connectToEthereum = async () => {
 
 export const generateSignature = async (account, provider) => {
   const signer = provider.getSigner();
-  const message = `${process.env.REACT_APP_SECRET_KEY}`;
+  const message = `${process.env.REACT_APP_SECRET_MESSAGE}`;
   const messageBytes = ethers.utils.toUtf8Bytes(message);
   const messageHash = ethers.utils.keccak256(messageBytes);
   const signature = await signer.signMessage(
