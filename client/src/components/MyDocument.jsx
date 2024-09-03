@@ -1,12 +1,5 @@
 import React from "react";
-import {
-  Page,
-  Text,
-  View,
-  Document,
-  StyleSheet,
-  PDFDownloadLink,
-} from "@react-pdf/renderer";
+import { Page, Text, View, Document, StyleSheet } from "@react-pdf/renderer";
 
 // Function to generate a random certificate number
 const generateCertificateNumber = () => {

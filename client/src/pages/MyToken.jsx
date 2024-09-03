@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
-import { connectToEthereum } from "../utils/Logic";
 import { ToastContainer, toast } from "react-toastify";
-
-const secretKey = process.env.REACT_APP_SECRET_KEY;
+import { connectToEthereum, generateSignature } from "../utils/Logic";
 
 const MyToken = ({ setAccount }) => {
   const ethers = require("ethers");
@@ -99,7 +97,12 @@ const MyToken = ({ setAccount }) => {
       setListings(myListings);
       setIsLoadingAvailable(false);
     } catch (error) {
-      toast.error("Failed to fetch listings, ", error);
+      toast.error(
+        <div>
+          Failed to fetch listings
+          <br /> {error.message}
+        </div>
+      );
     }
   };
 
@@ -124,7 +127,11 @@ const MyToken = ({ setAccount }) => {
       setPurchasedListings(purchasedListings);
       setIsLoading(false);
     } catch (error) {
-      toast.error("Failed to fetch purchased listings, ", error);
+      toast.error(
+        <div>
+          Failed to fetch purchased listings <br /> {error.message}
+        </div>
+      );
     }
   };
 
@@ -142,7 +149,11 @@ const MyToken = ({ setAccount }) => {
       setSoldListings(soldListings);
       setIsLoadingSold(false);
     } catch (error) {
-      toast.error("Failed to fetch sold listings, ", error);
+      toast.error(
+        <div>
+          Failed to fetch sold listings <br /> {error.message}
+        </div>
+      );
     }
   };
 
@@ -162,21 +173,28 @@ const MyToken = ({ setAccount }) => {
       }
     };
     init();
-  }, [fetchListings]);
+  });
 
   const handleDelete = async (listingIndex) => {
     if (token) {
       try {
-        const tx = await token.deleteListing(listingIndex, secretKey);
+        const { account, provider } = await connectToEthereum();
+
+        const signature = await generateSignature(account, provider);
+        const tx = await token.deleteListing(listingIndex, signature);
         await tx.wait();
-        alert("Listing deleted successfully!");
+        toast.success("Listing deleted successfully!");
         fetchListings(token);
       } catch (error) {
-        toast.error("Deletion failed, ", error);
-        alert("Deletion failed: " + error.message);
+        toast.error(
+          <div>
+            Deletion failed <br />
+            {error.message}
+          </div>
+        );
       }
     } else {
-      alert("Please connect your wallet first");
+      toast.warn("Please connect your wallet first");
     }
   };
 
@@ -186,7 +204,9 @@ const MyToken = ({ setAccount }) => {
       className="container mx-auto px-12 py-8 md:px-20"
     >
       <ToastContainer />
-      <h2 className="text-3xl font-bold text-center mb-6">My CTKN Listings</h2>
+      <h2 className="text-3xl font-bold text-center mb-6">
+        My Carbon Token Listings
+      </h2>
       <div className="space-y-4">
         {isLoadingAvailable ? (
           <div>Loading...</div>
@@ -215,11 +235,11 @@ const MyToken = ({ setAccount }) => {
             </div>
           ))
         ) : (
-          <div className="text-lg">No listings have been made.</div>
+          <div className="text-lg">No listings has been made.</div>
         )}
       </div>
       <h2 className="text-3xl font-bold text-center mb-6 pt-8">
-        Purchased Listings
+        Purchased Carbon Token
       </h2>
       <div className="space-y-4">
         {isLoading ? (
@@ -244,11 +264,11 @@ const MyToken = ({ setAccount }) => {
             </div>
           ))
         ) : (
-          <div className="text-lg">No listings been purchased.</div>
+          <div className="text-lg">No listings has been purchased.</div>
         )}
       </div>
       <h2 className="text-3xl font-bold text-center mb-6 pt-8">
-        Sold Listings
+        Carbon Token Sold
       </h2>
       <div className="space-y-4">
         {isLoadingSold ? (
@@ -273,7 +293,7 @@ const MyToken = ({ setAccount }) => {
             </div>
           ))
         ) : (
-          <div className="text-lg">No listings currently sold.</div>
+          <div className="text-lg">No listings has been sold.</div>
         )}
       </div>
     </div>

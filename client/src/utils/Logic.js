@@ -1,7 +1,7 @@
 import CarbonCreditTokenABI from "../CarbonToken.json";
+const ethers = require("ethers");
 
 export const connectToEthereum = async () => {
-  const ethers = require("ethers");
   if (!window.ethereum) {
     throw new Error("No Ethereum provider found");
   }
@@ -29,4 +29,15 @@ export const connectToEthereum = async () => {
   );
 
   return { provider, signer, account, token };
+};
+
+export const generateSignature = async (account, provider) => {
+  const signer = provider.getSigner();
+  const message = `${process.env.REACT_APP_SECRET_MESSAGE}`;
+  const messageBytes = ethers.utils.toUtf8Bytes(message);
+  const messageHash = ethers.utils.keccak256(messageBytes);
+  const signature = await signer.signMessage(
+    ethers.utils.arrayify(messageHash)
+  );
+  return signature;
 };
